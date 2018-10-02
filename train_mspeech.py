@@ -15,7 +15,7 @@ from model_set.Model2_1smart import ModelSpeech
 # from modification.SpeechModelClear import ModelSpeech
 # from modification.AttentionModel import ModelSpeech
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,3"
 # #进行配置，使用90%的GPU
 config = tf.ConfigProto()
 # config.gpu_options.per_process_gpu_memory_fraction = 0.9
@@ -35,7 +35,7 @@ if(system_type == 'Windows'):
 	datapath = 'E:\workspace\stdenv\individual_spp\dataset\segments'
 	modelpath = modelpath + '\\'
 elif(system_type == 'Linux'):
-	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/dataset/segments'
+	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/dataset/5-folds'
 	modelpath = modelpath + '/'
 else:
 	print('*[Message] Unknown System\n')
@@ -45,5 +45,5 @@ else:
 ms = ModelSpeech(datapath)
 
 #ms.LoadModel(modelpath + 'speech_model24_e_0_step_327500.model')
-ms.TrainModel(datapath, epoch = 50, batch_size = 16, load_model = False)
+ms.TrainModel(datapath, epoch = 50, batch_size = 32, load_model = False)
 

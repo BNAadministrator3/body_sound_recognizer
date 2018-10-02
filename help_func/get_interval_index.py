@@ -1,4 +1,4 @@
-from general_function.file_wav import get_wav_list
+from general_func.file_wav import get_wav_list
 import numpy as np
 
 def get_interval_list(filepath):

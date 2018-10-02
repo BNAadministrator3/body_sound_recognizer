@@ -8,8 +8,8 @@ import keras
 import matplotlib as plt
 
 import numpy as np
-from general_function.file_wav import *
-from general_function.file_dict import *
+from general_func.file_wav import *
+from general_func.file_dict import *
 from help_func.get_interval_index import get_interval_list
 
 import random
@@ -88,7 +88,7 @@ class DataCross():
                     crackle_path = os.path.join(fpath, 'crackle')
                     crackle_list = os.listdir(crackle_path)
                     crackle_list = [os.path.join(crackle_path,element) for element in crackle_list]
-                    print(len(crackle_list))
+                    # print(len(crackle_list))
                     both_path = os.path.join(fpath, 'both')
                     both_list = os.listdir(both_path)
                     both_list = [os.path.join(both_path, element) for element in both_list ]
@@ -121,12 +121,15 @@ class DataCross():
                 self.list_wheeze = self.list_wheeze + self.folds[i]['wheeze']
                 self.list_crackle = self.list_crackle + self.folds[i]['crackle']
                 self.list_both = self.list_both + self.folds[i]['both']
+            self.list_all = self.list_all + [{element:'normal'} for element in self.list_normal] \
+                                          + [{element: 'wheeze'} for element in self.list_wheeze] \
+                                          + [{element: 'crackle'} for element in self.list_crackle] \
+                                          + [{element: 'both'} for element in self.list_both]
+            self.DataNum = (len(self.list_normal) , len(self.list_wheeze) , len(self.list_crackle) , len(self.list_both))
             random.shuffle(self.list_normal)
             random.shuffle(self.list_wheeze)
             random.shuffle(self.list_crackle)
             random.shuffle(self.list_both)
-            self.DataNum = (len(self.list_normal) , len(self.list_wheeze) , len(self.list_crackle) , len(self.list_both))
-            del self.list_all
         elif type  == 'eval':
             i = int(order)
             for n in self.folds[i]['normal']:
@@ -138,13 +141,12 @@ class DataCross():
             for b in self.folds[i]['both']:
                 self.list_both.append({b:'both'})
             self.list_all = self.list_both + self.list_normal + self.list_crackle + self.list_wheeze
-            random.shuffle(self.list_all)
             self.DataNum = len(self.list_all)
             del self.list_normal, self.list_wheeze, self.list_crackle, self.list_both
         else:
             print('incorrect parameters.')
             assert(0)
-
+        random.shuffle(self.list_all)
 
     def GetDataEval(self, n_start, n_amount=1, mode='balanced'):
         '''

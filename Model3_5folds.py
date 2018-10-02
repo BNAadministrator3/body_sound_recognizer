@@ -9,9 +9,10 @@ import tfplot
 import matplotlib
 from sklearn.metrics import confusion_matrix
 from textwrap import wrap
+import gc
 
-from general_function.file_wav import *
-from general_function.gen_func import Comapare2
+from general_func.file_wav import *
+from general_func.gen_func import Comapare2
 
 # LSTM_CNN
 import keras as kr
@@ -19,8 +20,8 @@ import numpy as np
 import random
 import tensorflow as tf
 
-from model_set.readdata_crops import DataSpeech
-from model_set.readdata_crops import MAX_AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
+from readdata_5folds import DataCross
+from readdata_5folds import MAX_AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM, FOLDER_SPLIT_NUM
 from collections import Counter
 
 
@@ -116,26 +117,6 @@ class ModelSpeech():  # 语音模型类
 
         return [tv1,tv2]
 
-    # def batch_norm(self, x, phase_train, scope='bn', decay=0.9, eps=1e-5):
-    #     with tf.variable_scope(scope):
-    #         shape = x.get_shape().as_list()
-    #         beta = tf.get_variable(name='beta', shape=[shape[-1]], initializer=tf.constant_initializer(0.0),
-    #                                trainable=True)
-    #         gamma = tf.get_variable(name='gamma', shape=[shape[-1]],
-    #                                 initializer=tf.random_normal_initializer(1.0, 0.02), trainable=True)
-    #         batch_mean, batch_var = tf.nn.moments(x, [0, 1, 2], name='moments')
-    #         ema = tf.train.ExponentialMovingAverage(decay=decay)
-    #
-    #         def mean_var_with_update():
-    #             ema_apply_op = ema.apply([batch_mean, batch_var])
-    #             with tf.control_dependencies([ema_apply_op]):
-    #                 return tf.identity(batch_mean), tf.identity(batch_var)
-    #
-    #         mean, var = tf.cond(phase_train, mean_var_with_update,
-    #                             lambda: (ema.average(batch_mean), ema.average(batch_var)))
-    #         normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, eps)
-    #     return normed
-
     def TrainModel(self, datapath, epoch=2, batch_size=32, load_model=False, filename='model_set/speech_model25'):
         '''
         训练模型
@@ -149,50 +130,59 @@ class ModelSpeech():  # 语音模型类
         currently dont involve in load model function and txt export function.
         '''
         assert(batch_size%4 == 0)
-        data = DataSpeech(datapath, 'train')
-        num_data = sum(data.DataNum)  # 获取数据的数量
+        data = DataCross(datapath)
+        #1. clear the memory
+        #2. initialize the paras
+        #3. training, testing
+        #4. recording
+        #5. after all, statistic the info
+        for fold in range(FOLDER_SPLIT_NUM):
+            print('the {}th cross validation'.format(fold))
+            gc.collect()
+            data.SplitType(type='train',order=fold)
+            num_data = sum(data.DataNum)  # 获取数据的数量
+            # iterations_per_epoch = 2
+            iterations_per_epoch = max(data.DataNum) // (batch_size//4) + 1
+            print('trainer info:')
+            print('training data amounts: %d' % num_data)
+            print('increased epoches: ', epoch)
+            print('minibatch size: %d' % batch_size)
+            print('iterations per epoch: %d' % iterations_per_epoch)
 
-        # iterations_per_epoch = 2
-        iterations_per_epoch = max(data.DataNum) // (batch_size//4) + 1
-        print('trainer info:')
-        print('training data size: %d' % num_data)
-        print('increased epoches: ', epoch)
-        print('minibatch size: %d' % batch_size)
-        print('iterations per epoch: %d' % iterations_per_epoch)
-
-        saver = tf.train.Saver(max_to_keep=2)
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            try:
-                saver.restore(sess, os.path.join(os.getcwd(), 'checkpoints', 'files_model', 'speech.module')) #two files in a folder.
-            except:
-                print('Loading weights failed. Train from scratch.')
-            summary_merge = tf.summary.merge(self.train_summary)
-            os.system('rm -rf ./checkpoints/files_summary ')
-            train_writter = tf.summary.FileWriter(os.path.join(os.getcwd(), 'checkpoints', 'files_summary'), sess.graph)
-            best_score = 0
-            for i in range(0, epoch):
-                iteration = 0
-                yielddatas = data.data_genetator4t(batch_size)
-                pbar = tqdm(yielddatas)
-                for input, _ in pbar:
-                    feed = {self.input_data: input[0], self.label: input[1], self.is_train: True}
-                    _, loss, train_summary = sess.run([self.optimize, self.loss, summary_merge], feed_dict=feed)
-                    train_writter.add_summary(train_summary, iteration + i * iterations_per_epoch)
-                    pr = 'epoch:%d/%d,iteration: %d/%d ,loss: %s' % (epoch, i, iterations_per_epoch, iteration, loss)
-                    pbar.set_description(pr)
-                    if iteration == iterations_per_epoch:
-                        break
-                    else:
-                        iteration += 1
-                pbar.close()
-                self.TestModel(sess=sess, datapath=self.datapath, str_dataset='train', data_count=-1, out_report=False, writer=train_writter, step=i)
-                metrics = self.TestModel(sess=sess, datapath=self.datapath, str_dataset='eval', data_count=-1, out_report=False, writer=train_writter, step=i)
-                if (metrics['score'] > best_score and i>19):
-                    self.metrics = metrics
-                    self.metrics['epoch'] = i
-                    best_score =metrics['score']
-                    saver.save(sess, os.path.join(os.getcwd(),'checkpoints','files_model', 'speech.module'), global_step=i)
+            saver = tf.train.Saver(max_to_keep=2)
+            with tf.Session() as sess:
+                sess.run(tf.global_variables_initializer())
+                if load_model == True:
+                    try:
+                        saver.restore(sess, os.path.join(os.getcwd(), 'checkpoints', 'files_model', 'speech.module')) #two files in a folder.
+                    except:
+                        print('Loading weights failed. Train from scratch.')
+                summary_merge = tf.summary.merge(self.train_summary)
+                os.system('rm -rf ./checkpoints/files_summary ')
+                train_writter = tf.summary.FileWriter(os.path.join(os.getcwd(), 'checkpoints', 'files_summary'), sess.graph)
+                best_score = 0
+                for i in range(0, epoch):
+                    iteration = 0
+                    yielddatas = data.data_genetator4tTrain(batch_size)
+                    pbar = tqdm(yielddatas)
+                    for input, _ in pbar:
+                        feed = {self.input_data: input[0], self.label: input[1], self.is_train: True}
+                        _, loss, train_summary = sess.run([self.optimize, self.loss, summary_merge], feed_dict=feed)
+                        train_writter.add_summary(train_summary, iteration + i * iterations_per_epoch)
+                        pr = 'epoch:%d/%d,iteration: %d/%d ,loss: %s' % (epoch, i, iterations_per_epoch, iteration, loss)
+                        pbar.set_description(pr)
+                        if iteration == iterations_per_epoch:
+                            break
+                        else:
+                            iteration += 1
+                    pbar.close()
+                    self.TestModel(sess=sess, datapath=data, type='train', data_count=-1, out_report=False, writer=train_writter, step=i)
+                    metrics = self.TestModel(sess=sess, datapath=self.datapath, str_dataset='eval', data_count=-1, out_report=False, writer=train_writter, step=i)
+                    if (metrics['score'] > best_score and i>19):
+                        self.metrics = metrics
+                        self.metrics['epoch'] = i
+                        best_score =metrics['score']
+                        saver.save(sess, os.path.join(os.getcwd(),'checkpoints','files_model', 'speech.module'), global_step=i)
 
         print('The best metrics took place in the epoch: ', self.metrics['epoch'])
         print('Sensitivity: {}; Specificity: {}; Score: {}; Accuracy: {}'.format(self.metrics['sensitivity'],self.metrics['specificity'],self.metrics['score'],self.metrics['accuracy']))
@@ -206,7 +196,7 @@ class ModelSpeech():  # 语音模型类
         f.write(filename + comment)
         f.close()
 
-    def TestModel(self, sess, datapath='', str_dataset='eval', data_count=32, out_report=False, show_ratio=True,writer=tf.summary.FileWriter('files_summary', tf.get_default_graph()),step=0):
+    def TestModel(self, sess, dataObject='', type='eval', data_count=32, out_report=False, show_ratio=True,writer=tf.summary.FileWriter('files_summary', tf.get_default_graph()),step=0):
         '''
         测试检验模型效果
         '''

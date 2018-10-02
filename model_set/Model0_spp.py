@@ -3,8 +3,8 @@
 
 import platform as plat
 
-from general_function.file_wav import *
-from general_function.gen_func import Comapare
+from general_func.file_wav import *
+from general_func.gen_func import Comapare
 
 # LSTM_CNN
 import numpy as np

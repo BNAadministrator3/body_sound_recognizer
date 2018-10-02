@@ -5,7 +5,7 @@ import os, sys
 parentdir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0,parentdir)
 
-from general_function.file_wav import get_wav_list
+from general_func.file_wav import get_wav_list
 
 
 

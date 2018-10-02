@@ -8,8 +8,8 @@ import keras
 import matplotlib as plt
 
 import numpy as np
-from general_function.file_wav import *
-from general_function.file_dict import *
+from general_func.file_wav import *
+from general_func.file_dict import *
 from help_func.get_interval_index import get_interval_list
 
 import random

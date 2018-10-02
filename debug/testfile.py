@@ -1,7 +1,7 @@
-from general_function.file_wav import GetFrequencyFeature4
-from general_function.file_wav import GetFrequencyFeature3
-from general_function.file_wav import GetFrequencyFeatures
-from general_function.file_wav import read_wav_data
+from general_func.file_wav import GetFrequencyFeature4
+from general_func.file_wav import GetFrequencyFeature3
+from general_func.file_wav import GetFrequencyFeatures
+from general_func.file_wav import read_wav_data
 import matplotlib.pyplot as plt
 import tensorflow as tf
 

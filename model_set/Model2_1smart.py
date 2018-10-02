@@ -10,8 +10,8 @@ import matplotlib
 from sklearn.metrics import confusion_matrix
 from textwrap import wrap
 
-from general_function.file_wav import *
-from general_function.gen_func import Comapare2
+from general_func.file_wav import *
+from general_func.gen_func import Comapare2
 
 # LSTM_CNN
 import keras as kr
