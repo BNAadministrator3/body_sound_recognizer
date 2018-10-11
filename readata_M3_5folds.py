@@ -148,7 +148,7 @@ class DataCross():
             assert(0)
         random.shuffle(self.list_all)
 
-    def GetDataEval(self, n_start, n_amount=1, mode='balanced'):
+    def GetData(self, n_start, n_amount=1, mode='balanced'):
         '''
         :param n_start:
         :param n_amount:
@@ -217,7 +217,7 @@ class DataCross():
         data_label = np.zeros(shape=(4, 1), dtype=np.int16)
         path = ''
         for p in range(len(category)):
-            path = list(category[p][n_start % len(category[p])].keys())[0]
+            path = category[p][n_start % len(category[p])]
             data_label[p] = np.array([label[p]])
             wavsignal, fs = read_wav_data(path)
             datum_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length)
@@ -268,6 +268,7 @@ if (__name__ == '__main__'):
     l = DataCross(path)
     # l.SplitType(type='train',order=2)
     # print(l.folds)
+    x= l in locals() or 'var' in globals() #??????
     str = ['train', 'eval']
     l5 = []
     for i in range(5):
@@ -276,6 +277,9 @@ if (__name__ == '__main__'):
             l.SplitType(type=s,order=i)
             print('{} order cross validation, {} set: '.format(i,s))
             print('data amounts:',l.DataNum)
+            data=l.data_genetator4tTrain(4)
+            a,_=data.__next__()
+
             if s == 'train':
                 print('overall sum',sum(l.DataNum))
                 lst.append(sum(l.DataNum))

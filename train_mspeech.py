@@ -11,11 +11,13 @@ from keras.backend.tensorflow_backend import set_session
 
 # from Model0_spp import ModelSpeech
 # from Model1_general import ModelSpeech
-from model_set.Model2_1smart import ModelSpeech
+# from model_set.Model2_1smart import ModelSpeech
 # from modification.SpeechModelClear import ModelSpeech
 # from modification.AttentionModel import ModelSpeech
+from Model3_5folds import ModelSpeech
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #only display error and warning; for 1: all info; for 3: only error.
 # #进行配置，使用90%的GPU
 config = tf.ConfigProto()
 # config.gpu_options.per_process_gpu_memory_fraction = 0.9
@@ -45,5 +47,5 @@ else:
 ms = ModelSpeech(datapath)
 
 #ms.LoadModel(modelpath + 'speech_model24_e_0_step_327500.model')
-ms.TrainModel(datapath, epoch = 50, batch_size = 32, load_model = False)
+ms.TrainModel(datapath, epoch = 100, batch_size = 128, load_model = True)
 

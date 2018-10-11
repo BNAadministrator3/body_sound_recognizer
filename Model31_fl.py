@@ -23,6 +23,7 @@ import tensorflow as tf
 from readata_M3_5folds import DataCross
 from readata_M3_5folds import MAX_AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM, FOLDER_SPLIT_NUM
 from collections import Counter
+from general_func.FL import focal_loss
 
 
 class ModelSpeech():  # 语音模型类
@@ -103,9 +104,7 @@ class ModelSpeech():  # 语音模型类
                                    name='fc_2')
 
             self.y_pred = tf.keras.activations.softmax(self.fc_2)
-            # self.y_pred = tf.clip_by_value(y_pred, 1e-10, 1.0)
-            # self.loss = - tf.reduce_sum( self.label * tf.log(self.y_pred) )
-            self.loss = tf.losses.softmax_cross_entropy(self.label,self.fc_2)
+            self.loss = focal_loss(self.label, self.fc_2)
 
 
             self.optimize = tf.train.AdadeltaOptimizer(learning_rate=0.01, rho=0.95, epsilon=1e-06).minimize(self.loss)
