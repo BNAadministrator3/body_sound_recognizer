@@ -14,7 +14,9 @@ from keras.backend.tensorflow_backend import set_session
 # from model_set.Model2_1smart import ModelSpeech
 # from modification.SpeechModelClear import ModelSpeech
 # from modification.AttentionModel import ModelSpeech
-from Model3_5folds import ModelSpeech
+# from Model30_5folds import ModelSpeech
+from Model31_fl import ModelSpeech
+# from model_set.Model22_fl import ModelSpeech
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #only display error and warning; for 1: all info; for 3: only error.
@@ -38,6 +40,7 @@ if(system_type == 'Windows'):
 	modelpath = modelpath + '\\'
 elif(system_type == 'Linux'):
 	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/dataset/5-folds'
+	# datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/dataset/segments'
 	modelpath = modelpath + '/'
 else:
 	print('*[Message] Unknown System\n')

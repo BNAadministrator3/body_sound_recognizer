@@ -1,1 +1,1 @@
-tensorboard --logdir=/home/zhaok14/example/PycharmProjects/setsail/individual_spp/checkpoints/files_summary/
+tensorboard --logdir 5fold5:/home/zhaok14/example/PycharmProjects/setsail/individual_spp/checkpoints/files_summary,5fold:/home/zhaok14/example/PycharmProjects/setsail/individual_spp/debug/info/files_summary/5folds_fl2

@@ -15,7 +15,7 @@ def focal_loss(onehot_labels, logits, alpha=0.25, gamma=2.0):
     with tf.name_scope("focal_loss"):
         logits = tf.cast(logits, tf.float32)
         onehot_labels = tf.cast(onehot_labels, tf.float32)
-        ce = tf.losses.softmax_cross_entropy(labels=onehot_labels, logits=logits)
+        ce = tf.losses.softmax_cross_entropy(onehot_labels, logits=logits)
         predictions = tf.nn.sigmoid(logits)
         predictions_pt = tf.where(tf.equal(onehot_labels, 1), predictions, 1.-predictions)# ensure other position is zero!
         # add small value to avoid 0

@@ -104,7 +104,7 @@ class ModelSpeech():  # 语音模型类
                                    name='fc_2')
 
             self.y_pred = tf.keras.activations.softmax(self.fc_2)
-            self.loss = focal_loss(self.label, self.fc_2, gamma=5.0)
+            self.loss = focal_loss(self.label, self.fc_2)
 
 
             self.optimize = tf.train.AdadeltaOptimizer(learning_rate=0.01, rho=0.95, epsilon=1e-06).minimize(self.loss)

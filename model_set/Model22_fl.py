@@ -22,6 +22,7 @@ import tensorflow as tf
 from model_set.readdata_crops import DataSpeech
 from model_set.readdata_crops import MAX_AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
 from collections import Counter
+from help_func.FL import focal_loss
 
 
 class ModelSpeech():  # 语音模型类
@@ -103,9 +104,8 @@ class ModelSpeech():  # 语音模型类
                                name='fc_2')
 
         self.y_pred = tf.keras.activations.softmax(self.fc_2)
-        # self.y_pred = tf.clip_by_value(y_pred, 1e-10, 1.0)
-        # self.loss = - tf.reduce_sum( self.label * tf.log(self.y_pred) )
-        self.loss = tf.losses.softmax_cross_entropy(self.label,self.fc_2)
+        self.loss = focal_loss(self.label, self.fc_2)
+
         tv1=tf.summary.scalar('loss', self.loss)
 
         self.optimize = tf.train.AdadeltaOptimizer(learning_rate=0.01, rho=0.95, epsilon=1e-06).minimize(self.loss)
@@ -116,25 +116,25 @@ class ModelSpeech():  # 语音模型类
 
         return [tv1,tv2]
 
-    # def batch_norm(self, x, phase_train, scope='bn', decay=0.9, eps=1e-5):
-    #     with tf.variable_scope(scope):
-    #         shape = x.get_shape().as_list()
-    #         beta = tf.get_variable(name='beta', shape=[shape[-1]], initializer=tf.constant_initializer(0.0),
-    #                                trainable=True)
-    #         gamma = tf.get_variable(name='gamma', shape=[shape[-1]],
-    #                                 initializer=tf.random_normal_initializer(1.0, 0.02), trainable=True)
-    #         batch_mean, batch_var = tf.nn.moments(x, [0, 1, 2], name='moments')
-    #         ema = tf.train.ExponentialMovingAverage(decay=decay)
-    #
-    #         def mean_var_with_update():
-    #             ema_apply_op = ema.apply([batch_mean, batch_var])
-    #             with tf.control_dependencies([ema_apply_op]):
-    #                 return tf.identity(batch_mean), tf.identity(batch_var)
-    #
-    #         mean, var = tf.cond(phase_train, mean_var_with_update,
-    #                             lambda: (ema.average(batch_mean), ema.average(batch_var)))
-    #         normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, eps)
-    #     return normed
+    def batch_norm(self, x, phase_train, scope='bn', decay=0.9, eps=1e-5):
+        with tf.variable_scope(scope):
+            shape = x.get_shape().as_list()
+            beta = tf.get_variable(name='beta', shape=[shape[-1]], initializer=tf.constant_initializer(0.0),
+                                   trainable=True)
+            gamma = tf.get_variable(name='gamma', shape=[shape[-1]],
+                                    initializer=tf.random_normal_initializer(1.0, 0.02), trainable=True)
+            batch_mean, batch_var = tf.nn.moments(x, [0, 1, 2], name='moments')
+            ema = tf.train.ExponentialMovingAverage(decay=decay)
+
+            def mean_var_with_update():
+                ema_apply_op = ema.apply([batch_mean, batch_var])
+                with tf.control_dependencies([ema_apply_op]):
+                    return tf.identity(batch_mean), tf.identity(batch_var)
+
+            mean, var = tf.cond(phase_train, mean_var_with_update,
+                                lambda: (ema.average(batch_mean), ema.average(batch_var)))
+            normed = tf.nn.batch_normalization(x, mean, var, beta, gamma, eps)
+        return normed
 
     def TrainModel(self, datapath, epoch=2, batch_size=32, load_model=False, filename='model_set/speech_model25'):
         '''
@@ -160,7 +160,7 @@ class ModelSpeech():  # 语音模型类
         print('minibatch size: %d' % batch_size)
         print('iterations per epoch: %d' % iterations_per_epoch)
 
-        saver = tf.train.Saver(max_to_keep=2)
+        saver = tf.train.Saver(max_to_keep=1)
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             try:
@@ -174,7 +174,7 @@ class ModelSpeech():  # 语音模型类
             for i in range(0, epoch):
                 iteration = 0
                 yielddatas = data.data_genetator4t(batch_size)
-                pbar = tqdm.tqdm(yielddatas)
+                pbar = tqdm(yielddatas)
                 for input, _ in pbar:
                     feed = {self.input_data: input[0], self.label: input[1], self.is_train: True}
                     _, loss, train_summary = sess.run([self.optimize, self.loss, summary_merge], feed_dict=feed)
@@ -197,16 +197,7 @@ class ModelSpeech():  # 语音模型类
         print('The best metrics took place in the epoch: ', self.metrics['epoch'])
         print('Sensitivity: {}; Specificity: {}; Score: {}; Accuracy: {}'.format(self.metrics['sensitivity'],self.metrics['specificity'],self.metrics['score'],self.metrics['accuracy']))
 
-    def SaveModel(self, filename='model_set/speech_model25', comment=''):
-        '''
-        保存模型参数
-        '''
-        self.model.save_weights(filename + comment + '.model')
-        f = open('step25.txt', 'w')
-        f.write(filename + comment)
-        f.close()
-
-    def TestModel(self, sess, datapath='', str_dataset='eval', data_count=32, out_report=False, show_ratio=True,writer=tf.summary.FileWriter('files_summary', tf.get_default_graph()),step=0):
+    def TestModel(self, sess, writer, datapath='', str_dataset='eval', data_count=32, out_report=False, show_ratio=True,step=0):
         '''
         测试检验模型效果
         '''
