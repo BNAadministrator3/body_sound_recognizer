@@ -15,10 +15,10 @@ from keras.backend.tensorflow_backend import set_session
 # from modification.SpeechModelClear import ModelSpeech
 # from modification.AttentionModel import ModelSpeech
 # from Model30_5folds import ModelSpeech
-from Model31_fl import ModelSpeech
+from Model41_bowel import ModelSpeech
 # from model_set.Model22_fl import ModelSpeech
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #only display error and warning; for 1: all info; for 3: only error.
 # #进行配置，使用90%的GPU
 config = tf.ConfigProto()
@@ -39,8 +39,8 @@ if(system_type == 'Windows'):
 	datapath = 'E:\workspace\stdenv\individual_spp\dataset\segments'
 	modelpath = modelpath + '\\'
 elif(system_type == 'Linux'):
-	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/dataset/5-folds'
-	# datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/dataset/segments'
+	# datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/standard'
+	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/valbalan'
 	modelpath = modelpath + '/'
 else:
 	print('*[Message] Unknown System\n')
@@ -50,5 +50,5 @@ else:
 ms = ModelSpeech(datapath)
 
 #ms.LoadModel(modelpath + 'speech_model24_e_0_step_327500.model')
-ms.TrainModel(datapath, epoch = 100, batch_size = 128, load_model = True)
+ms.TrainModel(datapath, epoch = 10, batch_size = 32, load_model = False)
 

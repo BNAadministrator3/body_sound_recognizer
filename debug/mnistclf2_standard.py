@@ -7,8 +7,10 @@ import os
 import tqdm
 os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
-MNIST_TRAIN_SIZE = 60000
-MNIST_TEST_SIZE = 10000
+
+from confidentlearning.classification import RankPruning
+from sklearn.linear_model import LogisticRegression as logreg
+
 
 class cnn():
 
@@ -19,28 +21,6 @@ class cnn():
             self.epochs = 10
         else:
             self.epochs = epochs
-
-    # 1. data input
-    def dataLoader(self, path = None, mode = None):
-        if path is None:
-            path = '/home/zhaok14/example/PycharmProjects/cnn_scratch/MNIST_data'
-        else:
-            pass
-        if mode is None:
-            mode = 'train'
-        else:
-            pass
-        mnist = input_data.read_data_sets(path)
-        if mode == 'train':
-            train_data = mnist.train.images # Returns np.array
-            train_labels = np.asarray(mnist.train.labels, dtype=np.int32)
-            return (train_data,train_labels)
-        if mode == 'eval':
-            eval_data = mnist.test.images # Returns np.array
-            eval_labels = np.asarray(mnist.test.labels, dtype=np.int32)
-            return (eval_data,eval_labels)
-        else:
-            raise ValueError(" 'mode' parameter is incorrectly assigned .")
 
     def dataLoaderConcise(self, path=None):
         if path is None:
@@ -80,22 +60,14 @@ class cnn():
         while True:
             yield 1
 
+    def trainFit(self,mnist,noisyLabels=False):
 
-    def loadWeight(self):
-        try:
-            model_file = tf.train.latest_checkpoint('/home/zhaok14/example/PycharmProjects/setsail/individual_spp/debug/denosing/')
-            print(os.path.join(os.getcwd(), 'denosing'))
-            print(model_file)
-            self.saver.restore(self.sess, model_file)  # two files in a folder.
-        except:
-            print('Loading weights failed.')
-
-
-    def trainFit(self,mnist):
-
+        if noisyLabels:
+            print('training with nosiy labels!')
         epochs = self.epochs
         minibatch_size = 128
-        iterations_per_epoch = MNIST_TRAIN_SIZE//minibatch_size + 1
+        print('training data size:',len(mnist.train._images))
+        iterations_per_epoch = len(mnist.train._images)//minibatch_size + 1
         with tf.Session(graph=self.graph) as self.sess:
             self.sess.run(tf.global_variables_initializer()) #or load weight!!!
             if self.load == True:
@@ -116,11 +88,14 @@ class cnn():
                     else:
                         iteration += 1 #in fact train more than the one iteration
             pbar.close()
-            self.saver.save(self.sess, os.path.join(os.getcwd(),  'denoising', 'speech.module'), global_step=epochs)
+            if noisyLabels:
+                self.saver.save(self.sess, os.path.join(os.getcwd(),  'mnistclf1_mini', 'speechNoisy.module'), global_step=epochs)
+            else:
+                self.saver.save(self.sess, os.path.join(os.getcwd(), 'mnistclf1_mini', 'speech.module'), global_step=epochs)
 
     def compute_accuracy(self, v_x, v_y, str=None):
         if str == None:
-            ckpt = tf.train.get_checkpoint_state('./denoising/')  # 通过检查点文件锁定最新的模型
+            ckpt = tf.train.get_checkpoint_state('./mnistclf1_mini/')  # 通过检查点文件锁定最新的模型
             print('checking if the model is correctly used:',ckpt.model_checkpoint_path)
             new_saver = tf.train.import_meta_graph(ckpt.model_checkpoint_path + '.meta')  # 载入图结构，保存在.meta文件中
         else:
@@ -131,34 +106,35 @@ class cnn():
             y_pre = self.sess.run(self.pred, feed_dict=feed)
         correct_prediction = np.equal(np.argmax(y_pre, 1), np.argmax(v_y, 1))
         accuracy = np.mean(correct_prediction)
-        accuracy = round(accuracy,2)
+        accuracy = round(accuracy,4)
         return accuracy
 
     def test(self,mnist):
-        print(self.compute_accuracy(mnist.test.images, mnist.test.labels,str='./denoising/speech.module-10' ),'% ')
+        print(self.compute_accuracy(mnist.test.images, mnist.test.labels,str='./mnistclf1_mini/speechNoisy.module-10' )*100,'% ')
 
     def nosiyLabels(self,mnist,ratio=None):
         # print(mnist.train._labels)
-        print(type(mnist.train._labels))
-        prop = 0.9
+        # print(type(mnist.train._labels))
+        prop = 1
         if ratio is not None:
             prop = ratio
         temp = mnist.train._labels
-        t = int(temp.shape[0]*prop)
+        t = int(temp.shape[0]*prop-1)
         for i in range(t):
-            print('original:',temp[t,:])
-            print('ing:',np.roll(temp[t,:],2))
-            temp[t,:] = np.roll(temp[t,:],2)
-            print('finals:',temp[i,:])
+            # print('original:',temp[t,:])
+            # print('ing:',np.roll(temp[t,:],2))
+            temp[i,:] = np.roll(temp[i,:],2)
+            # print('finals:',temp[i,:])
         mnist.train._labels = temp
 
 
-if (__name__ == '__main__'):
 
-    clf=cnn(epochs = 0)
-    mnist = clf.dataLoaderConcise(path=None)
 
-    clf.nosiyLabels(mnist)
 
-    clf.trainFit(mnist)
-    clf.test(mnist)
+
+
+
+
+
+
+
