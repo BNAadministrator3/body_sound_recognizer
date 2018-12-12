@@ -117,7 +117,6 @@ class ModelSpeech():  # 语音模型类
 
             return tf.summary.merge([tv1,tv2])
 
-
     def TrainModel(self, datapath, epoch=2, batch_size=32, load_model=False, filename='model_set/speech_model25'):
         '''
         训练模型
@@ -142,7 +141,7 @@ class ModelSpeech():  # 语音模型类
         print(90 * '*')
         print(90 * '*')
 
-        iterations_per_epoch = min(data.DataNum) // (batch_size//2) + 1
+        iterations_per_epoch = min(data.DataNum) // (batch_size//CLASS_NUM) + 1
         # iterations_per_epoch = 2
         print('trainer info:')
         print('training data size: %d' % num_data)
@@ -167,7 +166,7 @@ class ModelSpeech():  # 语音模型类
 
             for i in range(0, epoch):
                 iteration = 0
-                yielddatas = data.data_genetator(batch_size)
+                yielddatas = data.data_genetator(batch_size,epoch)
                 pbar = tqdm(yielddatas)
                 for input, _ in pbar:
                     feed = {self.input_data: input[0], self.label: input[1], self.is_train: True}
@@ -192,8 +191,7 @@ class ModelSpeech():  # 语音模型类
         print('The best metrics took place in the epoch: ', self.metrics['epoch'])
         print('Sensitivity: {}; Specificity: {}; Score: {}; Accuracy: {}'.format(self.metrics['sensitivity'],self.metrics['specificity'],self.metrics['score'],self.metrics['accuracy']))
 
-
-    def TestModel(self, sess, datapath='', str_dataset='eval', data_count=32, out_report=False, show_ratio=True,writer=tf.summary.FileWriter('files_summary', tf.get_default_graph()),step=0):
+    def TestModel(self, sess, writer, datapath='', str_dataset='eval', data_count=32, out_report=False, show_ratio=True, step=0):
         '''
         测试检验模型效果
         '''
@@ -332,7 +330,6 @@ class ModelSpeech():  # 语音模型类
             cm = cm.astype('float') * 10 / cm.sum(axis=1)[:, np.newaxis]
             cm = np.nan_to_num(cm, copy=True)
             cm = cm.astype('int')
-
         np.set_printoptions(precision=2)
 
         fig = matplotlib.figure.Figure(figsize=(7, 7), dpi=320, facecolor='w', edgecolor='k')

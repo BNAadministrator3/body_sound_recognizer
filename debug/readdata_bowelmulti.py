@@ -9,6 +9,9 @@ import numpy as np
 from general_func.file_wav import GetFrequencyFeatures, read_wav_data
 from debug.mfcc_trial import mfccFeatures
 import random
+from multiprocessing import Pool
+import time
+
 
 AUDIO_LENGTH = 197  #size:200*197
 AUDIO_FEATURE_LENGTH = 200
@@ -16,6 +19,26 @@ CLASS_NUM = 2
 
 #For compatibility
 MAX_AUDIO_LENGTH = AUDIO_LENGTH
+
+def singlePicture(para):
+    path, data_label = para
+    wavsignal, fs = read_wav_data(path)
+    data_input = mfccFeatures(wavsignal, fs)
+    # data_input = GetFrequencyFeatures(wavsignal, fs, AUDIO_FEATURE_LENGTH, 400,shift=100)
+    if data_label[0] == 0:
+        data_input = shifting(data_input)
+    data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+    return (data_input,data_label)
+
+def shifting(image,bias=39):
+    bias=int(image.shape[0] *0.2)
+    translation = random.randint(0,(bias-1)//3)*3
+    case = random.randint(1,3)
+    if case != 2:#up blank
+        image[0:translation]=0
+    if case != 1:
+        image[-1-translation:-1] = 0
+    return image
 
 class DataSpeech():
 
@@ -101,15 +124,7 @@ class DataSpeech():
         self.list_non0[0:terminus] = temp
 
 
-    def shifting(self,image,bias=39):
-        bias=int(image.shape[0] *0.2)
-        translation = random.randint(0,(bias-1)//3)*3
-        case = random.randint(1,3)
-        if case != 2:#up blank
-            image[0:translation]=0
-        if case != 1:
-            image[-1-translation:-1] = 0
-        return image
+
 
     def GetData(self, n_start, n_amount=32, featureType = 'spectrogram',  mode='balanced'):
         '''
@@ -140,7 +155,7 @@ class DataSpeech():
                     data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=100)
                     data_label = np.array([label[genre]])
                     if data_label[0] == 0:
-                        data_input = self.shifting(data_input)
+                        data_input = shifting(data_input)
                     data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                     data.append(data_input)
                     labels.append(data_label)
@@ -149,10 +164,48 @@ class DataSpeech():
             path = self.list_path[n_start][0]
             data_label = np.array([self.list_path[n_start][1]])
             wavsignal, fs = read_wav_data(path)
-            data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=100)
-            # data_input = mfccFeatures(wavsignal, fs)
+            # data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=100)
+            data_input = mfccFeatures(wavsignal, fs)
             data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
-            return data_input,  data_label
+            return data_input, data_label
+
+
+
+    def GetDataMulti(self, n_start, n_amount=32, featureType = 'spectrogram',  mode='balanced'):
+
+        assert(n_amount%CLASS_NUM==0)
+        category = (self.list_bowel1, self.list_non0)
+        link = ('bowels', 'non')
+        label = (1, 0)
+        # extract = {'spectrogram':GetFrequencyFeatures,'mfcc':mfccFeatures}
+        path = ''
+        if mode == 'balanced':
+            data = []
+            labels = []
+            info = []
+            for genre in range(CLASS_NUM):
+                for file in range(n_amount//CLASS_NUM):
+                    data_label = np.array([label[genre]])
+                    filename = category[genre][(n_start + file)%self.DataNum[genre]]
+                    # filename = category[genre][(n_start + file) % min(self.DataNum)]
+                    path = self.common_path + link[genre] + self.slash + filename
+                    info.append((path, data_label))
+            pool = Pool(n_amount)
+            whole = pool.map(singlePicture, info)
+            pool.close()
+            pool.join()
+            data = [row[0] for row in whole]
+            labels = [row[1] for row in whole]
+            return data, labels
+
+        if mode == 'non-repetitive':
+            path = self.list_path[n_start][0]
+            data_label = np.array([self.list_path[n_start][1]])
+            wavsignal, fs = read_wav_data(path)
+            # data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=100)
+            data_input = mfccFeatures(wavsignal, fs)
+            data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+            return data_input, data_label
 
     def data_genetator(self, batch_size=32, epochs=0, audio_length=AUDIO_LENGTH):
         '''
@@ -167,7 +220,8 @@ class DataSpeech():
             ran_num = random.randint(0, iterations_per_epoch-1)  # 获取一个随机数
             origin = int(ran_num * batch_size // CLASS_NUM)
             bias = origin + epochs*min(self.DataNum)
-            X,y = self.GetData(n_start=origin, n_amount=batch_size )
+            # X,y = self.GetData(n_start=origin, n_amount=batch_size )
+            X, y = self.GetDataMulti(n_start=origin, n_amount=batch_size)
             X = np.array(X)
             y = np.array(y)
             yield [X, keras.utils.to_categorical(y, num_classes=self.class_num)], keras.utils.to_categorical(y, num_classes=self.class_num)  # 功能只是转成独热编码
@@ -185,9 +239,19 @@ if (__name__ == '__main__'):
     # print('min time step:', l.min_time_step)
     # print('min time step:', l.GetMinTimeStep())
     # print('data size:', l.DataNum)
-    print(l.GetData(random.randint(0,8000), mode='non-repetitive'))
-    aa = l.data_genetator(batch_size=32,)
-    for i in aa:
-        a, b = i
-        print(a, b)
-    pass
+    start = time.time()
+    a,b=l.GetData(n_start=0, n_amount=32, featureType = 'spectrogram',  mode='balanced')
+    end = time.time()
+    print('conventional:', round(end - start, 2), 's')
+
+    start = time.time()
+    c, d = l.GetDataMulti(n_start=0, n_amount=32, featureType='spectrogram', mode='balanced')
+    end = time.time()
+    print('creative:', round(end - start, 2), 's')
+
+    # print(l.GetData(random.randint(0,8000), mode='non-repetitive'))
+    # aa = l.data_genetator(batch_size=32,)
+    # for i in aa:
+    #     a, b = i
+    #     print(a, b)
+    # pass

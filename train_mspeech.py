@@ -15,10 +15,11 @@ from keras.backend.tensorflow_backend import set_session
 # from modification.SpeechModelClear import ModelSpeech
 # from modification.AttentionModel import ModelSpeech
 # from Model30_5folds import ModelSpeech
-from Model41_bowel import ModelSpeech
+from Model42_bowkeras import ModelSpeech
 # from model_set.Model22_fl import ModelSpeech
+# from Model41_bowel import ModelSpeech
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #only display error and warning; for 1: all info; for 3: only error.
 # #进行配置，使用90%的GPU
 config = tf.ConfigProto()
@@ -40,7 +41,7 @@ if(system_type == 'Windows'):
 	modelpath = modelpath + '\\'
 elif(system_type == 'Linux'):
 	# datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/standard'
-	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/valbalan'
+	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/unbalanced'
 	modelpath = modelpath + '/'
 else:
 	print('*[Message] Unknown System\n')

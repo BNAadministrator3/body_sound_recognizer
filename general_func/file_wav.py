@@ -4,7 +4,7 @@
 import os
 import wave
 import numpy as np
-import matplotlib.pyplot as plt  
+# import matplotlib.pyplot as plt
 import math
 import time
 
@@ -88,10 +88,9 @@ def GetFrequencyFeature3(wavsignal, fs):
 	data_input = np.log(data_input + 1)
 	return data_input
 
-def GetFrequencyFeatures(wavsignal, fs, feature_dimension = 256,frame_length = 400):
+def GetFrequencyFeatures(wavsignal, fs, feature_dimension = 256,frame_length = 400, shift=100):
 
 	length = frame_length
-	shift = 100
 	nfft = int(feature_dimension*2)
 	#1. forming the time-window
 	x = np.linspace(0, length - 1, length, dtype=np.int64)
