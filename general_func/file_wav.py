@@ -10,10 +10,12 @@ import time
 
 from python_speech_features import mfcc
 from python_speech_features import delta
-from python_speech_features import logfbank
+from librosa import power_to_db
+# from python_speech_features import logfbank
 
 from scipy.fftpack import fft
 from scipy import signal
+from librosa import feature as ft
 
 def read_wav_data(filename):
 	'''
@@ -88,7 +90,7 @@ def GetFrequencyFeature3(wavsignal, fs):
 	data_input = np.log(data_input + 1)
 	return data_input
 
-def GetFrequencyFeatures(wavsignal, fs, feature_dimension = 256,frame_length = 400, shift=100):
+def GetFrequencyFeatures(wavsignal, fs, feature_dimension = 200,frame_length = 400, shift=160):
 
 	length = frame_length
 	nfft = int(feature_dimension*2)
@@ -116,6 +118,17 @@ def GetFrequencyFeatures(wavsignal, fs, feature_dimension = 256,frame_length = 4
 	data_input = np.log(data_input + 1)
 	return data_input
 
+def MelSpectrogram(wavsignal, fs, frame_length = 400, shift=160,filternum = 26):
+	'''
+	:param arg*: similiar to the above.
+	:param filternum: feature dimension.
+	:return: mel-scaled spectrogram
+	'''
+
+	melspek = ft.melspectrogram(np.array(wavsignal[0], dtype=np.float32), fs, n_fft=frame_length, hop_length=shift, power=2.0, n_mels=filternum)
+	melspek = power_to_db(melspek, ref=np.max)
+	melspek = np.rot90(melspek, 1, (1, 0))
+	return melspek
 
 #due to the lack of log, some low-frequency components are not visiuable.
 def GetFrequencyFeature4(wavsignal, fs, debug = False):

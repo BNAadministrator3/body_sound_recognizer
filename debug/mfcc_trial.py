@@ -1,6 +1,6 @@
 from python_speech_features import mfcc
-import scipy.io.wavfile as wav
-import matplotlib.pyplot as plt
+# import scipy.io.wavfile as wav
+# import matplotlib.pyplot as plt
 import numpy as np
 from general_func.file_wav import read_wav_data, GetFrequencyFeatures
 from multiprocessing import Pool
@@ -34,6 +34,10 @@ def mfccFeatures(wave_data, samplerate, featurelength=200, framelength=400):
         picture[i,:] = np.reshape(temp,(1,-1))
 
     return picture   #返回帧信号矩阵
+
+def SimpleMfccFeatures(wave_data, samplerate, featurelength=26):
+    temp = mfcc(wave_data[0], samplerate=samplerate, winlen=0.1, winstep=0.04, numcep=featurelength, appendEnergy=False)
+    return temp[0:123,:]
 
 def singleMfcc(frame):
     temp = mfcc(frame, samplerate=4000, winlen=0.01, winstep=0.01, numcep=20, appendEnergy=False)
@@ -70,19 +74,21 @@ if __name__ == '__main__':
     path = "/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/unbalanced/validation/bowels/244814983784728_2017_03_29_21_31_25.wav"
     wavsignal, fs = read_wav_data(path)
     start = time.time()
-    mfcc_feat1 = mfccFeatures(wavsignal,fs)
+    mfcc_feat1 = SimpleMfccFeatures(wavsignal,fs)
     end = time.time()
     print('conventional:',round(end - start,2),'s')
-    start = time.time()
-    mfcc_feat2 = mfccFeaturesMultithreads(wavsignal,fs)
-    end = time.time()
-    print('multithreads:', round(end - start, 2), 's')
-    print((mfcc_feat1==mfcc_feat2).all())
+    print('shape:',mfcc_feat1.shape)
 
-    start = time.time()
-    mfcc_feat3 =  GetFrequencyFeatures(wavsignal, fs)
-    end = time.time()
-    print('spectrogram:', round(end - start, 2), 's')
+    # start = time.time()
+    # mfcc_feat2 = mfccFeaturesMultithreads(wavsignal,fs)
+    # end = time.time()
+    # print('multithreads:', round(end - start, 2), 's')
+    # print((mfcc_feat1==mfcc_feat2).all())
+    #
+    # start = time.time()
+    # mfcc_feat3 =  GetFrequencyFeatures(wavsignal, fs)
+    # end = time.time()
+    # print('spectrogram:', round(end - start, 2), 's')
 
     # plt.plot(mfcc_feat)
     # plt.show()

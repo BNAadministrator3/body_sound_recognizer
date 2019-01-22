@@ -6,11 +6,11 @@ import os
 import keras
 
 import numpy as np
-from general_func.file_wav import GetFrequencyFeatures, read_wav_data
-from debug.mfcc_trial import mfccFeatures
+from general_func.file_wav import GetFrequencyFeatures,MelSpectrogram, read_wav_data
+from debug.mfcc_trial import SimpleMfccFeatures
 import random
 
-AUDIO_LENGTH = 197  #size:200*197
+AUDIO_LENGTH = 123  #size:200*197
 AUDIO_FEATURE_LENGTH = 200
 CLASS_NUM = 2
 
@@ -136,11 +136,12 @@ class DataSpeech():
                     # filename = category[genre][(n_start + file) % min(self.DataNum)]
                     path = self.common_path + link[genre] + self.slash + filename
                     wavsignal, fs = read_wav_data(path)
-                    # data_input = mfccFeatures(wavsignal, fs)
-                    data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=100)
+                    # data_input = SimpleMfccFeatures(wavsignal, fs)
+                    data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
+                    # data_input = MelSpectrogram(wavsignal, fs,frame_length = self.frame_length, shift=160,filternum = 26)
                     data_label = np.array([label[genre]])
-                    if data_label[0] == 0:
-                        data_input = self.shifting(data_input)
+                    # if data_label[0] == 0:
+                    data_input = self.shifting(data_input)
                     data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                     data.append(data_input)
                     labels.append(data_label)
@@ -149,8 +150,9 @@ class DataSpeech():
             path = self.list_path[n_start][0]
             data_label = np.array([self.list_path[n_start][1]])
             wavsignal, fs = read_wav_data(path)
-            data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=100)
-            # data_input = mfccFeatures(wavsignal, fs)
+            data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
+            # data_input = MelSpectrogram(wavsignal, fs, frame_length=self.frame_length, shift=160, filternum=26)
+            # data_input = SimpleMfccFeatures(wavsignal, fs)
             data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
             return data_input,  data_label
 
@@ -173,6 +175,65 @@ class DataSpeech():
             yield [X, keras.utils.to_categorical(y, num_classes=self.class_num)], keras.utils.to_categorical(y, num_classes=self.class_num)  # 功能只是转成独热编码
         pass
 
+class Testing():
+
+    def __init__(self, pathSame, pathDistinct):
+        system_type = plat.system()  # 由于不同的系统的文件路径表示不一样，需要进行判断
+        self.pathSame = pathSame
+        self.pathDistinct = pathDistinct
+
+        self.slash = ''
+        if (system_type == 'Windows'):
+            self.slash = '\\'  # 反斜杠
+        elif (system_type == 'Linux'):
+            self.slash = '/'  # 正斜杠
+        else:
+            print('*[Warning] Unknown System\n')
+            self.slash = '/'  # 正斜杠
+
+        if (self.slash != self.pathSame[-1]):  # 在目录路径末尾增加斜杠
+            self.pathSame = self.pathSame + self.slash
+        if (self.slash != self.pathDistinct[-1]):  # 在目录路径末尾增加斜杠
+            self.pathDistinct = self.pathDistinct + self.slash
+
+        self.LoadDataList()
+        self.class_num = CLASS_NUM
+        self.feat_dimension = AUDIO_FEATURE_LENGTH
+        self.frame_length = 400
+
+    def LoadDataList(self):
+        self.listSame = []
+        self.listDistinct = []
+        link = ('bowels', 'non')
+        for i in link:
+            tag = 1 if i == 'bowels' else 0
+            list_name_folder = os.listdir(self.pathSame + i)
+            for j in list_name_folder:
+                str = self.pathSame + i + self.slash + j
+                self.listSame.append((str, tag))
+            list_name_folder = os.listdir(self.pathDistinct + i)
+            for j in list_name_folder:
+                str = self.pathDistinct + i + self.slash + j
+                self.listDistinct.append((str, tag))
+        random.shuffle(self.listSame)
+        random.shuffle(self.listDistinct)
+        self.DataNum_Same = len(self.listSame)
+        self.DataNum_Distinct = len(self.listDistinct)
+        self.DataNum = {'Same':self.DataNum_Same,'Distinct':self.DataNum_Distinct}
+
+    def GetData(self, n_start, n_amount=32, dataType = 'same'):
+        assert(n_amount%CLASS_NUM==0)
+        if dataType == 'Same':
+            path = self.listSame[n_start][0]
+            data_label = np.array([self.listSame[n_start][1]])
+        elif dataType == 'Distinct':
+            path = self.listDistinct[n_start][0]
+            data_label = np.array([self.listDistinct[n_start][1]])
+        wavsignal, fs = read_wav_data(path)
+        data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length, shift=160)
+        # data_input = SimpleMfccFeatures(wavsignal, fs)
+        data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+        return data_input, data_label
 
 
 if (__name__ == '__main__'):

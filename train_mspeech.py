@@ -41,7 +41,7 @@ if(system_type == 'Windows'):
 	modelpath = modelpath + '\\'
 elif(system_type == 'Linux'):
 	# datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/standard'
-	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/unbalanced'
+	datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect'
 	modelpath = modelpath + '/'
 else:
 	print('*[Message] Unknown System\n')
@@ -51,5 +51,5 @@ else:
 ms = ModelSpeech(datapath)
 
 #ms.LoadModel(modelpath + 'speech_model24_e_0_step_327500.model')
-ms.TrainModel(datapath, epoch = 10, batch_size = 32, load_model = False)
+ms.TrainModel(datapath, epoch = 20, batch_size = 32, load_weights = False)
 

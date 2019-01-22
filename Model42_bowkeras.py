@@ -1,7 +1,6 @@
 #auxiliary package
 import platform as plat
 from tqdm import tqdm
-import numpy as np
 import random
 import os
 import time
@@ -12,40 +11,16 @@ import keras.backend as k
 from keras.layers import *
 from keras import optimizers
 from keras.regularizers import l2
-from keras.activations import softmax
-from keras.losses import categorical_crossentropy
 from keras.models import Model
+from keras.models import load_model
+from keras.activations import relu
 
 #self-made package
 from general_func.gen_func import Comapare2
-# from debug.readdata_bowelmulti import DataSpeech
 from readdata_bowel import DataSpeech
 from readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
-from help_func.FL_keras import focal_loss
+from help_func.utilities_keras import focal_loss, inception_model, inception_separable, inception_Xseparable, block
 from help_func.utilties import plot_confusion_matrix
-
-
-# The codes reference to the https://github.com/km1414/CNN-models/blob/master/googlenet-lite/googlenet-lite.py
-
-# Inception module - main building block
-def inception_model(input, filters_1x1, filters_3x3_reduce, filters_3x3, filters_5x5_reduce, filters_5x5, filters_pool_proj):
-    #1*1 convolutions
-    conv_1x1 = Conv2D(filters=filters_1x1, kernel_size=(1, 1), padding='same', activation='relu', kernel_regularizer=l2(0.01))(input)
-    #3*3 convolutions
-    conv_3x3_reduce = Conv2D(filters=filters_3x3_reduce, kernel_size=(1, 1), padding='same', activation='relu', kernel_regularizer=l2(0.01))(input)
-    conv_3x3 = Conv2D(filters=filters_3x3, kernel_size=(3, 3), padding='same', activation='relu', kernel_regularizer=l2(0.01))(conv_3x3_reduce)
-    #5*5 convolutions
-    conv_5x5_reduce  = Conv2D(filters=filters_5x5_reduce, kernel_size=(1, 1), padding='same', activation='relu', kernel_regularizer=l2(0.01))(input)
-    conv_5x5 = Conv2D(filters=filters_5x5, kernel_size=(5, 5), padding='same', activation='relu', kernel_regularizer=l2(0.01))(conv_5x5_reduce)
-    #1*1 convolutions with maxpooling
-    maxpool = MaxPooling2D(pool_size=(3, 3), strides=(1, 1), padding='same')(input)
-    maxpool_proj = Conv2D(filters=filters_pool_proj, kernel_size=(1, 1), strides=(1, 1), padding='same', activation='relu', kernel_regularizer=l2(0.01))(maxpool)
-
-    inception_output = concatenate([conv_1x1, conv_3x3, conv_5x5, maxpool_proj], axis=3)  # use tf as backend
-
-    return inception_output
-
-
 
 class ModelSpeech():  # 模型类
     def __init__(self, datapath):
@@ -66,10 +41,135 @@ class ModelSpeech():  # 模型类
         if (self.slash != self.datapath[-1]):  # 在目录路径末尾增加斜杠
             self.datapath = self.datapath + self.slash
 
-        # self.model = self.CreateInceptionModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
+        self.modelname = ''
+        # self.model = self.CreateResNetModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
+        self.model = self.CreateCustomizedResNetModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
+        # self.model = self.CreateCustomizedInceptionModel2(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
+        # self.model = self.CreateCustomizedInceptionModel3(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
+        # self.model = self.CreateCustomizedInceptionModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
+        # self.model = self.CreateSimplifiedClassicModel2(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
         # self.model = self.CreateLSTMModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
-        self.model = self.CreateClassicModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
+        # self.model = self.CreateClassicModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
         self.metrics = {'type': 'eval', 'sensitivity': 0, 'specificity': 0, 'score': 0, 'accuracy': 0, 'epoch': 0}
+
+        if len(self.modelname) != 0:
+            if AUDIO_FEATURE_LENGTH == 26:
+                strname = 'mfcc_'+self.modelname+'.h5'
+                self.savpath = os.path.join(os.getcwd(), 'network&&weights', 'mfcc', self.modelname,strname)
+            else:
+                strname = 'spec_' + self.modelname + '.h5'
+                self.savpath = os.path.join(os.getcwd(), 'network&&weights', 'spectrogram', self.modelname,strname)
+            # print(self.savpath)
+        else:
+            assert(0)
+
+    def CreateCustomizedResNetModel(self, input_shape, classes):
+        X_input = Input(name='the_input', shape=input_shape)
+        level_h1 = block(32)(X_input)
+        level_m1 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(level_h1)  # 池化层
+        level_h2 = block(64)(level_m1)
+        level_m2 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(level_h2)  # 池化层
+        level_h3 = block(128)(level_m2)
+        level_m3 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(level_h3)  # 池化层
+        # level_h4 = block(64)(level_m3)
+        # level_m4 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(level_h4)  # 池化层
+        flayer = Flatten()(level_m3)
+
+        fc = Dense(classes, use_bias=True, kernel_initializer='he_normal')(flayer)  # 全连接层
+        y_pred = Activation('softmax', name='Activation0')(fc)
+
+        model = Model(inputs=X_input, outputs=y_pred)
+        optimizer = optimizers.Adadelta()
+        # model.compile(optimizer=optimizer, loss='binary_crossentropy')# [focal_loss])
+        model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
+        print('Customized resnet model estabished.')
+        self.modelname = 'residual'
+        return model
+
+    def CreateResNetModel(self, input_shape, classes):
+        X_input = Input(name='the_input', shape=input_shape)
+        x = Conv2D(kernel_size=3, filters=16, strides=1, padding='same', kernel_regularizer=regularizers.l2(0.01))(X_input)
+        x = BatchNormalization()(x)
+        x = Activation(relu)(x)
+
+        x = block(16)(x)
+        x = block(16)(x)
+
+        x = BatchNormalization()(x)
+        x = Activation(relu)(x)
+
+        # 28x28x48 -> 1x48
+        x = GlobalAveragePooling2D()(x)
+        # dropout for more robust learning
+        x = Dropout(0.2)(x)
+        last = Dense(units=classes, activation='softmax', kernel_regularizer=regularizers.l2(0.01))(x)
+
+        model = Model(inputs=X_input, outputs=last)
+        optimizer = optimizers.Adadelta()
+        model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
+        print('Original resnet neural network established. ')
+        return model
+
+    def CreateSimplifiedClassicModel2(self,input_shape, classes):
+
+        X_input = Input(name='the_input', shape=input_shape)
+
+        layer_h1 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(X_input)  # 卷积层
+        layer_h2 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h1)  # 卷积层
+        layer_h3 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h2)  # 池化层
+
+        layer_h4 = Conv2D(64, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h3)  # 卷积层
+        layer_h5 = Conv2D(64, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h4)  # 卷积层
+        layer_h6 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h5)  # 池化层
+
+        layer_h7 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h6)  # 卷积层
+        layer_h8 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h7)  # 池化层
+
+        layer_h9 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h8)  # 卷积层
+        layer_h10 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h9)  # 池化层
+
+        flayer = Flatten()(layer_h10)
+        # fc1 = Dense(units=32, activation = "relu", use_bias = True, kernel_initializer = 'he_normal')(flayer)
+        fc2 = Dense(classes, use_bias=True, kernel_initializer='he_normal')(flayer)  # 全连接层
+        y_pred = Activation('softmax', name='Activation0')(fc2)
+
+        model = Model(inputs=X_input, outputs=y_pred)
+        optimizer = optimizers.Adadelta()
+        # model.compile(optimizer=optimizer, loss='binary_crossentropy')# [focal_loss])
+        model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
+        print('Further simplified cnn model estabished.')
+        self.modelname = 'cnn+dnn'
+        return model
+
+    def CreateSimplifiedClassicModel(self,input_shape, classes):
+
+        X_input = Input(name='the_input', shape=input_shape)
+
+        layer_h1 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(X_input)  # 卷积层
+        layer_h2 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h1)  # 卷积层
+        layer_h3 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h2)  # 池化层
+
+        layer_h4 = Conv2D(64, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h3)  # 卷积层
+        layer_h5 = Conv2D(64, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h4)  # 卷积层
+        layer_h6 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h5)  # 池化层
+
+        layer_h7 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h6)  # 卷积层
+        layer_h8 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h7)  # 池化层
+
+        layer_h9 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h8)  # 卷积层
+        layer_h10 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h9)  # 池化层
+
+        flayer = Flatten()(layer_h10)
+        fc1 = Dense(units=32, activation = "relu", use_bias = True, kernel_initializer = 'he_normal')(flayer)
+        fc2 = Dense(classes, use_bias=True, kernel_initializer='he_normal')(fc1)  # 全连接层
+        y_pred = Activation('softmax', name='Activation0')(fc2)
+
+        model = Model(inputs=X_input, outputs=y_pred)
+        optimizer = optimizers.Adadelta()
+        # model.compile(optimizer=optimizer, loss='binary_crossentropy')# [focal_loss])
+        model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
+        print('Simplified cnn model estabished.')
+        return model
 
     def CreateClassicModel(self,input_shape, classes):
 
@@ -89,17 +189,18 @@ class ModelSpeech():  # 模型类
         # layer_h6 = Dropout(0.2)(layer_h6)
         layer_h7 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal')(layer_h6)  # 卷积层
         # layer_h7 = Dropout(0.2)(layer_h7)
-        layer_h8 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal')(layer_h7)  # 卷积层
-        layer_h9 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h8)  # 池化层
+        ## layer_h8 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal')(layer_h7)  # 卷积层
+        layer_h9 = MaxPooling2D(pool_size=2, strides=None, padding="valid")(layer_h7)  # 池化层
 
         # layer_h9 = Dropout(0.3)(layer_h9)
-        layer_h10 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal')(layer_h9)  # 卷积层
+        ## layer_h10 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal')(layer_h9)  # 卷积层
         # layer_h10 = Dropout(0.4)(layer_h10)
-        layer_h11 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal')(layer_h10)  # 卷积层
+        ## layer_h11 = Conv2D(128, (3, 3), use_bias=True, activation='relu', padding='same',kernel_initializer='he_normal')(layer_h10)  # 卷积层
 
-        flayer = Flatten()(layer_h11)
+        ## flayer = Flatten()(layer_h11)
+        flayer = Flatten()(layer_h9)
         # flayer = Dropout(0.4)(flayer)
-        fc1 = Dense(units=128, activation = "relu", use_bias = True, kernel_initializer = 'he_normal')(flayer)
+        fc1 = Dense(units=32, activation = "relu", use_bias = True, kernel_initializer = 'he_normal')(flayer)
         # fc1 = Dropout(0.5)(fc1)
         fc2 = Dense(classes, use_bias=True, kernel_initializer='he_normal')(fc1)  # 全连接层
         y_pred = Activation('softmax', name='Activation0')(fc2)
@@ -110,17 +211,72 @@ class ModelSpeech():  # 模型类
         model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
         return model
 
-    def CreateLSTMModel(self,input_shape, classes):
-        X_input = Input(name='the_input',shape=input_shape)
-        y = Reshape((197, 200),name='squeeze')(X_input)
-        y = LSTM(128, return_sequences=False)(y) #computation complexity
-        y = Dense(classes, activation='softmax')(y)
+    def CreateCustomizedInceptionModel3(self, input_shape, classes): #0.42557M,perfect
+        X_input = Input(name='the_input', shape=input_shape)
+        layer_h1 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(X_input)  # 卷积层
+        layer_h2 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal',kernel_regularizer=l2(0.01))(layer_h1)  # 卷积层
+        layer_h3 = MaxPooling2D(pool_size=3, strides=None, padding="valid")(layer_h2)  # 池化层
 
-        model = Model(inputs=X_input, outputs=y)
+        inception_3a = inception_Xseparable(input=layer_h3, filters_1x1=64, filters_3x3_reduce=96, filters_3x3=128,filters_5x5_reduce=16, filters_5x5=32, filters_pool_proj=32)
+        inception_3b = inception_Xseparable(input=inception_3a, filters_1x1=128, filters_3x3_reduce=128, filters_3x3=192,filters_5x5_reduce=32, filters_5x5=96, filters_pool_proj=64)  # 224*25*480
+
+        layer_h5 = MaxPooling2D(pool_size=3, strides=None, padding="valid")(inception_3b)  # 池化层
+        transmute = core.Flatten()(layer_h5)
+        linear = Dense(units=classes, activation='softmax', kernel_regularizer=l2(0.01))(transmute)
+        last = linear
+
+        model = Model(inputs=X_input, outputs=last)
         optimizer = optimizers.Adadelta()
-        model.compile(optimizer=optimizer, loss='binary_crossentropy')
+        model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
+        print('Customized inception neural network established. ')
+        self.modelname='inception'
         return model
 
+
+    def CreateCustomizedInceptionModel2(self, input_shape, classes): #0.718M basically take effect
+        X_input = Input(name='the_input', shape=input_shape)
+        layer_h1 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(0.01))(X_input)  # 卷积层
+        layer_h2 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(0.01))(layer_h1)  # 卷积层
+        layer_h3 = MaxPooling2D(pool_size=3, strides=None, padding="valid")(layer_h2)  # 池化层
+
+        inception_3a = inception_separable(input=layer_h3, filters_1x1=64, filters_3x3_reduce=96, filters_3x3=128,filters_5x5_reduce=16, filters_5x5=32, filters_pool_proj=32)
+        inception_3b = inception_separable(input=inception_3a, filters_1x1=128, filters_3x3_reduce=128, filters_3x3=192,filters_5x5_reduce=32, filters_5x5=96, filters_pool_proj=64)  # 224*25*480
+
+        layer_h5 = MaxPooling2D(pool_size=3, strides=None, padding="valid")(inception_3b)  # 池化层
+
+        transmute = core.Flatten()(layer_h5)
+        linear = Dense(units=classes, activation='softmax', kernel_regularizer=l2(0.01))(transmute)
+        last = linear
+
+        model = Model(inputs=X_input, outputs=last)
+        optimizer = optimizers.Adadelta()
+        model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
+        # model.compile(optimizer=optimizer,loss='binary_crossentropy')
+        print('Customized inception neural network established. ')
+        return model
+
+    def CreateCustomizedInceptionModel(self, input_shape, classes):
+        X_input = Input(name='the_input', shape=input_shape)
+        layer_h1 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(0.01))(X_input)  # 卷积层
+        layer_h2 = Conv2D(32, (3, 3), use_bias=True, activation='relu', padding='same', kernel_initializer='he_normal', kernel_regularizer=l2(0.01))(layer_h1)  # 卷积层
+        layer_h3 = MaxPooling2D(pool_size=3, strides=None, padding="valid")(layer_h2)  # 池化层
+
+        inception_3a = inception_model(input=layer_h3, filters_1x1=32, filters_3x3_reduce=48, filters_3x3=64,filters_5x5_reduce=8, filters_5x5=16, filters_pool_proj=16)
+        inception_3b = inception_model(input=inception_3a, filters_1x1=85, filters_3x3_reduce=85, filters_3x3=128,filters_5x5_reduce=21, filters_5x5=64, filters_pool_proj=42)
+        # inception_3a = inception_model(input=layer_h3, filters_1x1=64, filters_3x3_reduce=96, filters_3x3=128, filters_5x5_reduce=16, filters_5x5=32, filters_pool_proj=32)
+        # inception_3b = inception_model(input=inception_3a, filters_1x1=128, filters_3x3_reduce=128, filters_3x3=192, filters_5x5_reduce=32, filters_5x5=96, filters_pool_proj=64)
+        layer_h3 = MaxPooling2D(pool_size=3, strides=None, padding="valid")(inception_3b)  # 池化层
+
+        transmute = core.Flatten()(layer_h3)
+        linear = Dense(units=classes, activation='softmax', kernel_regularizer=l2(0.01))(transmute)
+        last = linear
+
+        model = Model(inputs=X_input, outputs=last)
+        optimizer = optimizers.Adadelta()
+        model.compile(optimizer=optimizer, loss=[focal_loss(alpha=0.25, gamma=2)])
+        # model.compile(optimizer=optimizer,loss='binary_crossentropy')
+        print('Customized inception neural network established. ')
+        return model
 
     #inception module
     def CreateInceptionModel(self,input_shape, classes):
@@ -141,26 +297,37 @@ class ModelSpeech():  # 模型类
 
         # Stage 3 - another type of ending layers.
         # drop1 = Dropout(rate=0.4)(inception_3b)
-        # transmute = core.Flatten()(drop1)
-        # linear = Dense(units=classes, activation='softmax', kernel_regularizer=l2(0.01))(transmute)
-        # last = linear
+        transmute = core.Flatten()(inception_3b)
+        linear = Dense(units=classes, activation='softmax', kernel_regularizer=l2(0.01))(transmute)
+        last = linear
 
         # Stage 3 - ending layers
-        conv_1x1 = Conv2D(filters=classes, kernel_size=(1, 1), padding='same', activation='relu',kernel_regularizer=l2(0.01))(inception_3b)
-        last = GlobalAveragePooling2D()(conv_1x1)
-        last = Activation(softmax)(last)
+        # conv_1x1 = Conv2D(filters=classes, kernel_size=(1, 1), padding='same', activation='relu',kernel_regularizer=l2(0.01))(inception_3b)
+        # last = GlobalAveragePooling2D()(conv_1x1)
+        # last = Activation(softmax)(last)
 
         # Create model
         model = Model(inputs=X_input, outputs=last)
         optimizer = optimizers.Adadelta()
-        model.compile(optimizer=optimizer,loss =[focal_loss])
-        # model.compile(optimizer=optimizer,loss=categorical_crossentropy)
+        model.compile(optimizer=optimizer,loss =[focal_loss(alpha=0.25, gamma=2)])
+        # model.compile(optimizer=optimizer,loss='binary_crossentropy')
+        print('Inception neural network established. ')
 
         return model
 
-    def TrainModel(self, datapath, epoch=2, batch_size=32, load_model=False, filename='model_set/speech_model25'):
-        #1. info checking..
-        assert (batch_size % 2 == 0)
+    def CreateLSTMModel(self, input_shape, classes):
+        X_input = Input(name='the_input', shape=input_shape)
+        y = Reshape((197, 200), name='squeeze')(X_input)
+        y = LSTM(128, return_sequences=False)(y)  # computation complexity
+        y = Dense(classes, activation='softmax')(y)
+
+        model = Model(inputs=X_input, outputs=y)
+        optimizer = optimizers.Adadelta()
+        model.compile(optimizer=optimizer, loss='binary_crossentropy')
+        return model
+
+    def TrainModel(self, datapath, epoch=2, batch_size=32, load_weights=False, filename='model_set/speech_model25'):
+        assert (batch_size % CLASS_NUM == 0)
         data = DataSpeech(datapath, 'train')
         num_data = sum(data.DataNum)  # 获取数据的数量
 
@@ -182,11 +349,11 @@ class ModelSpeech():  # 模型类
 
         with k.get_session() as sess:
             train_writter.add_graph(sess.graph)
-
-            saver = tf.train.Saver(max_to_keep=1)
-            if load_model == True:
+            if load_weights == True:
                 try:
-                    saver.restore(sess, os.path.join(os.getcwd(), 'checkpoints', 'files_model','speech-f' + str(0) + '.module'))  # two files in a folder.
+                    # modelpath = os.path.join(os.getcwd(), 'network&&weights', 'spectrogram', 'inception','spec_inception.h5')
+                    self.model = load_model(modelpath,custom_objects={'focal_loss': focal_loss,'focal_loss_fixed': focal_loss()})
+                    print('Successfully loading the model.')
                 except:
                     print('Loading weights failed. Train from scratch.')
             sess.run(tf.global_variables_initializer())
@@ -211,11 +378,11 @@ class ModelSpeech():  # 模型类
                 if i % 1 == 0:
                     self.TestModel(sess=sess, datapath=self.datapath, str_dataset='train', data_count=1000, out_report=False, writer=train_writter, step=i)
                     metrics = self.TestModel(sess=sess, datapath=self.datapath, str_dataset='eval', data_count=-1, out_report=False, writer=train_writter, step=i)
-                    if (metrics['score'] > best_score and i > 0):
+                    if (metrics['score'] >= best_score and i > 0):
                         self.metrics = metrics
                         self.metrics['epoch'] = i
                         best_score = metrics['score']
-                        saver.save(sess, os.path.join(os.getcwd(), 'checkpoints', 'files_model','speech-f' + str(0) + '.module'), global_step=i)
+                        self.model.save(self.savpath)
 
         print('The best metrics took place in the epoch: ', self.metrics['epoch'])
         print('Sensitivity: {}; Specificity: {}; Score: {}; Accuracy: {}'.format(self.metrics['sensitivity'],self.metrics['specificity'],self.metrics['score'],self.metrics['accuracy']))
@@ -333,3 +500,16 @@ class ModelSpeech():  # 模型类
         except StopIteration:
             print('[Error] Model Test Error. please check data format.')
 
+if __name__ == '__main__':
+    datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect'
+    a = ModelSpeech(datapath)
+    m1 = a.CreateCustomizedResNetModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
+    print('cnn+dnn:',m1.count_params())
+    print('cnn+dnn:', m1.summary())
+    # print('inception:',a.model.count_params())
+
+    # m2 = a.CreateInceptionModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
+    # print('inception:', m2.count_params())
+    #
+    # m3 = a.CreateLSTMModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
+    # print('LSTM:', m3.count_params())
