@@ -33,12 +33,13 @@ training = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowels
 validation = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/validation/','distinct environment']
 
 #2. prepare the model
-modelpath = os.path.join(os.getcwd(), 'network&&weights', 'spectrogram','inception','spec_inception.h5')
-model = load_model(modelpath,custom_objects={'focal_loss': focal_loss,'focal_loss_fixed': focal_loss()})
+modelpath = os.path.join(os.getcwd(), 'network&&weights', 'mfcc','lstm','mfcc_lstm.h5')
+# model = load_model(modelpath,custom_objects={'focal_loss': focal_loss,'focal_loss_fixed': focal_loss()})
+model = load_model(modelpath)
 
 #3. follow the routine
-# data = Testing(training[0], validation[0])
-data = Testing(test_same[0], test_distinct[0])
+data = Testing(training[0], validation[0])
+# data = Testing(test_same[0], test_distinct[0])
 choice = 'Same'
 num_data = data.DataNum[choice]  # 获取数据的数量
 ran_num = random.randint(0, num_data - 1)  # 获取一个随机数
@@ -56,7 +57,6 @@ start = time.time()
 # data_count = 200
 for i in tqdm(range(num_data)):
 	data_input, data_labels = data.GetData((ran_num + i) % num_data, dataType=choice)  # 从随机数开始连续向后取一定数量数据
-
 	predictions = []
 	if len(data_input) <= AUDIO_LENGTH:
 		data_in = np.zeros((1, AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), dtype=np.float)

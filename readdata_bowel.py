@@ -10,8 +10,10 @@ from general_func.file_wav import GetFrequencyFeatures,MelSpectrogram, read_wav_
 from debug.mfcc_trial import SimpleMfccFeatures
 import random
 
+FEATURE_TYPE = 'mfcc'
+
 AUDIO_LENGTH = 123  #size:200*197
-AUDIO_FEATURE_LENGTH = 200
+AUDIO_FEATURE_LENGTH = 200 if FEATURE_TYPE in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM'] else 26
 CLASS_NUM = 2
 
 #For compatibility
@@ -127,34 +129,64 @@ class DataSpeech():
         label = (1, 0)
         # extract = {'spectrogram':GetFrequencyFeatures,'mfcc':mfccFeatures}
         path = ''
-        if mode == 'balanced':
-            data = []
-            labels = []
-            for genre in range(CLASS_NUM):
-                for file in range(n_amount//CLASS_NUM):
-                    filename = category[genre][(n_start + file)%self.DataNum[genre]]
-                    # filename = category[genre][(n_start + file) % min(self.DataNum)]
-                    path = self.common_path + link[genre] + self.slash + filename
-                    wavsignal, fs = read_wav_data(path)
-                    # data_input = SimpleMfccFeatures(wavsignal, fs)
-                    data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
-                    # data_input = MelSpectrogram(wavsignal, fs,frame_length = self.frame_length, shift=160,filternum = 26)
-                    data_label = np.array([label[genre]])
-                    # if data_label[0] == 0:
-                    data_input = self.shifting(data_input)
-                    data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
-                    data.append(data_input)
-                    labels.append(data_label)
-            return data, labels
-        if mode == 'non-repetitive':
-            path = self.list_path[n_start][0]
-            data_label = np.array([self.list_path[n_start][1]])
-            wavsignal, fs = read_wav_data(path)
-            data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
-            # data_input = MelSpectrogram(wavsignal, fs, frame_length=self.frame_length, shift=160, filternum=26)
-            # data_input = SimpleMfccFeatures(wavsignal, fs)
-            data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
-            return data_input,  data_label
+        if FEATURE_TYPE in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM']:
+            if mode == 'balanced':
+                data = []
+                labels = []
+                for genre in range(CLASS_NUM):
+                    for file in range(n_amount//CLASS_NUM):
+                        filename = category[genre][(n_start + file)%self.DataNum[genre]]
+                        # filename = category[genre][(n_start + file) % min(self.DataNum)]
+                        path = self.common_path + link[genre] + self.slash + filename
+                        wavsignal, fs = read_wav_data(path)
+                        data_input = SimpleMfccFeatures(wavsignal, fs)
+                        data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
+                        # data_input = MelSpectrogram(wavsignal, fs,frame_length = self.frame_length, shift=160,filternum = 26)
+                        data_label = np.array([label[genre]])
+                        # if data_label[0] == 0:
+                        data_input = self.shifting(data_input)
+                        data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                        data.append(data_input)
+                        labels.append(data_label)
+                return data, labels
+            if mode == 'non-repetitive':
+                path = self.list_path[n_start][0]
+                data_label = np.array([self.list_path[n_start][1]])
+                wavsignal, fs = read_wav_data(path)
+                data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
+                # data_input = MelSpectrogram(wavsignal, fs, frame_length=self.frame_length, shift=160, filternum=26)
+                # data_input = SimpleMfccFeatures(wavsignal, fs)
+                data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                return data_input,  data_label
+        elif FEATURE_TYPE in ['mfcc','MFCC','Mfcc']:
+            if mode == 'balanced':
+                data = []
+                labels = []
+                for genre in range(CLASS_NUM):
+                    for file in range(n_amount//CLASS_NUM):
+                        filename = category[genre][(n_start + file)%self.DataNum[genre]]
+                        # filename = category[genre][(n_start + file) % min(self.DataNum)]
+                        path = self.common_path + link[genre] + self.slash + filename
+                        wavsignal, fs = read_wav_data(path)
+                        data_input = SimpleMfccFeatures(wavsignal, fs)
+                        data_label = np.array([label[genre]])
+                        # if data_label[0] == 0:
+                        data_input = self.shifting(data_input)
+                        data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                        data.append(data_input)
+                        labels.append(data_label)
+                return data, labels
+            if mode == 'non-repetitive':
+                path = self.list_path[n_start][0]
+                data_label = np.array([self.list_path[n_start][1]])
+                wavsignal, fs = read_wav_data(path)
+                data_input = SimpleMfccFeatures(wavsignal, fs)
+                data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                return data_input,  data_label
+        else:
+            print('Unknown feature type.')
+            assert(0)
+
 
     def data_genetator(self, batch_size=32, epochs=0, audio_length=AUDIO_LENGTH):
         '''
@@ -230,10 +262,16 @@ class Testing():
             path = self.listDistinct[n_start][0]
             data_label = np.array([self.listDistinct[n_start][1]])
         wavsignal, fs = read_wav_data(path)
-        data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length, shift=160)
-        # data_input = SimpleMfccFeatures(wavsignal, fs)
+        if FEATURE_TYPE in ['spec', 'Spec', 'SPEC', 'Spectrogram', 'SPECTROGRAM']:
+            data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length, shift=160)
+        elif FEATURE_TYPE in ['mfcc', 'MFCC', 'Mfcc']:
+            data_input = SimpleMfccFeatures(wavsignal, fs)
+        else:
+            print('Unknown feature type.')
+            assert (0)
         data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
         return data_input, data_label
+
 
 
 if (__name__ == '__main__'):
@@ -246,7 +284,7 @@ if (__name__ == '__main__'):
     # print('min time step:', l.min_time_step)
     # print('min time step:', l.GetMinTimeStep())
     # print('data size:', l.DataNum)
-    print(l.GetData(random.randint(0,8000), mode='non-repetitive'))
+    print(l.GetData(random.randint(0,8000), mode='non-repetitive')[0].shape)
     aa = l.data_genetator(batch_size=32,)
     for i in aa:
         a, b = i

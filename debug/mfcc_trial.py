@@ -5,6 +5,7 @@ import numpy as np
 from general_func.file_wav import read_wav_data, GetFrequencyFeatures
 from multiprocessing import Pool
 import time
+from scipy import stats
 
 # the argumens is infact not working.
 # not pass the test.
@@ -37,7 +38,10 @@ def mfccFeatures(wave_data, samplerate, featurelength=200, framelength=400):
 
 def SimpleMfccFeatures(wave_data, samplerate, featurelength=26):
     temp = mfcc(wave_data[0], samplerate=samplerate, winlen=0.1, winstep=0.04, numcep=featurelength, appendEnergy=False)
-    return temp[0:123,:]
+    temp = temp[0:123, :]
+    # return stats.zscore(temp)
+    b = (temp - np.min(temp)) / np.ptp(temp)
+    return b
 
 def singleMfcc(frame):
     temp = mfcc(frame, samplerate=4000, winlen=0.01, winstep=0.01, numcep=20, appendEnergy=False)

@@ -15,7 +15,7 @@ from keras.backend.tensorflow_backend import set_session
 # from modification.SpeechModelClear import ModelSpeech
 # from modification.AttentionModel import ModelSpeech
 # from Model30_5folds import ModelSpeech
-from Model42_bowkeras import ModelSpeech
+from Model43_bowkeNewdat import ModelSpeech
 # from model_set.Model22_fl import ModelSpeech
 # from Model41_bowel import ModelSpeech
 
