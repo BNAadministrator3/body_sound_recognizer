@@ -4,13 +4,15 @@ import datetime
 import platform as plat
 import os
 import keras
+from skimage.feature import hog
 
 import numpy as np
 from general_func.file_wav import GetFrequencyFeatures,MelSpectrogram, read_wav_data
 from debug.mfcc_trial import SimpleMfccFeatures
 import random
 
-FEATURE_TYPE = 'mfcc'
+PRIOR_ART = True#already choose hog features as the spec output!!!!
+FEATURE_TYPE = 'spec'
 
 AUDIO_LENGTH = 123  #size:200*197
 AUDIO_FEATURE_LENGTH = 200 if FEATURE_TYPE in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM'] else 26
@@ -139,14 +141,16 @@ class DataSpeech():
                         # filename = category[genre][(n_start + file) % min(self.DataNum)]
                         path = self.common_path + link[genre] + self.slash + filename
                         wavsignal, fs = read_wav_data(path)
-                        data_input = SimpleMfccFeatures(wavsignal, fs)
+                        # data_input = SimpleMfccFeatures(wavsignal, fs)
                         data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
+                        if PRIOR_ART == True:
+                            data_input = hog(data_input, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualise=False)
                         # data_input = MelSpectrogram(wavsignal, fs,frame_length = self.frame_length, shift=160,filternum = 26)
-                        data_label = np.array([label[genre]])
-                        # if data_label[0] == 0:
-                        data_input = self.shifting(data_input)
-                        data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                        else:
+                            data_input = self.shifting(data_input)
+                            data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                         data.append(data_input)
+                        data_label = np.array([label[genre]])
                         labels.append(data_label)
                 return data, labels
             if mode == 'non-repetitive':
@@ -156,7 +160,10 @@ class DataSpeech():
                 data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
                 # data_input = MelSpectrogram(wavsignal, fs, frame_length=self.frame_length, shift=160, filternum=26)
                 # data_input = SimpleMfccFeatures(wavsignal, fs)
-                data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                if PRIOR_ART == True:
+                    data_input = hog(data_input, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1),visualise=False)
+                else:
+                    data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                 return data_input,  data_label
         elif FEATURE_TYPE in ['mfcc','MFCC','Mfcc']:
             if mode == 'balanced':
@@ -171,6 +178,7 @@ class DataSpeech():
                         data_input = SimpleMfccFeatures(wavsignal, fs)
                         data_label = np.array([label[genre]])
                         # if data_label[0] == 0:
+                        # if PRIOR_ART == False:
                         data_input = self.shifting(data_input)
                         data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                         data.append(data_input)
@@ -211,8 +219,10 @@ class Testing():
 
     def __init__(self, pathSame, pathDistinct):
         system_type = plat.system()  # 由于不同的系统的文件路径表示不一样，需要进行判断
-        self.pathSame = pathSame
-        self.pathDistinct = pathDistinct
+        self.pathSame = pathSame[0]
+        self.pathSameLabel = pathSame[1]
+        self.pathDistinct = pathDistinct[0]
+        self.pathDistinctLabel = pathDistinct[1]
 
         self.slash = ''
         if (system_type == 'Windows'):
@@ -251,14 +261,14 @@ class Testing():
         random.shuffle(self.listDistinct)
         self.DataNum_Same = len(self.listSame)
         self.DataNum_Distinct = len(self.listDistinct)
-        self.DataNum = {'Same':self.DataNum_Same,'Distinct':self.DataNum_Distinct}
+        self.DataNum = {self.pathSameLabel:self.DataNum_Same,self.pathDistinctLabel:self.DataNum_Distinct}
 
     def GetData(self, n_start, n_amount=32, dataType = 'same'):
         assert(n_amount%CLASS_NUM==0)
-        if dataType == 'Same':
+        if dataType == self.pathSameLabel:
             path = self.listSame[n_start][0]
             data_label = np.array([self.listSame[n_start][1]])
-        elif dataType == 'Distinct':
+        elif dataType == self.pathDistinctLabel:
             path = self.listDistinct[n_start][0]
             data_label = np.array([self.listDistinct[n_start][1]])
         wavsignal, fs = read_wav_data(path)

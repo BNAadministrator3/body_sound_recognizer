@@ -32,6 +32,8 @@ test_distinct = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/b
 training = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/train/','same environment']
 validation = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/validation/','distinct environment']
 
+test_similar = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/test-similar/','similar environment']
+
 #2. prepare the model
 modelpath = os.path.join(os.getcwd(), 'network&&weights', 'mfcc','lstm','mfcc_lstm.h5')
 # model = load_model(modelpath,custom_objects={'focal_loss': focal_loss,'focal_loss_fixed': focal_loss()})

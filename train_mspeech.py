@@ -15,11 +15,11 @@ from keras.backend.tensorflow_backend import set_session
 # from modification.SpeechModelClear import ModelSpeech
 # from modification.AttentionModel import ModelSpeech
 # from Model30_5folds import ModelSpeech
-from Model43_bowkeNewdat import ModelSpeech
+from Model44_trainSetMain import ModelSpeech
 # from model_set.Model22_fl import ModelSpeech
 # from Model41_bowel import ModelSpeech
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2' #only display error and warning; for 1: all info; for 3: only error.
 # #进行配置，使用90%的GPU
 config = tf.ConfigProto()

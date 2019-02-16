@@ -116,6 +116,8 @@ def GetFrequencyFeatures(wavsignal, fs, feature_dimension = 200,frame_length = 4
 
 	# print(data_input.shape)
 	data_input = np.log(data_input + 1)
+	data_input = (data_input - np.min(data_input)) / np.ptp(data_input)
+	# data_input = (data_input - data_input.mean()) / data_input.std()
 	return data_input
 
 def MelSpectrogram(wavsignal, fs, frame_length = 400, shift=160,filternum = 26):
