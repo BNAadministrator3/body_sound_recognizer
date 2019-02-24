@@ -11,7 +11,7 @@ from general_func.file_wav import GetFrequencyFeatures,MelSpectrogram, read_wav_
 from debug.mfcc_trial import SimpleMfccFeatures
 import random
 
-PRIOR_ART = True#already choose hog features as the spec output!!!!
+PRIOR_ART = False#already choose hog features as the spec output!!!!
 FEATURE_TYPE = 'spec'
 
 AUDIO_LENGTH = 123  #size:200*197
@@ -143,11 +143,12 @@ class DataSpeech():
                         wavsignal, fs = read_wav_data(path)
                         # data_input = SimpleMfccFeatures(wavsignal, fs)
                         data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
+                        data_input = self.shifting(data_input)
                         if PRIOR_ART == True:
                             data_input = hog(data_input, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualise=False)
                         # data_input = MelSpectrogram(wavsignal, fs,frame_length = self.frame_length, shift=160,filternum = 26)
                         else:
-                            data_input = self.shifting(data_input)
+
                             data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                         data.append(data_input)
                         data_label = np.array([label[genre]])
@@ -216,7 +217,6 @@ class DataSpeech():
         pass
 
 class Testing():
-
     def __init__(self, pathSame, pathDistinct):
         system_type = plat.system()  # 由于不同的系统的文件路径表示不一样，需要进行判断
         self.pathSame = pathSame[0]
@@ -274,11 +274,16 @@ class Testing():
         wavsignal, fs = read_wav_data(path)
         if FEATURE_TYPE in ['spec', 'Spec', 'SPEC', 'Spectrogram', 'SPECTROGRAM']:
             data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length, shift=160)
+            if PRIOR_ART == True:
+               data_input = hog(data_input, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1),visualise=False)
+               return data_input, data_label
         elif FEATURE_TYPE in ['mfcc', 'MFCC', 'Mfcc']:
             data_input = SimpleMfccFeatures(wavsignal, fs)
         else:
             print('Unknown feature type.')
             assert (0)
+
+
         data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
         return data_input, data_label
 

@@ -9,7 +9,6 @@ import time
 import tensorflow as tf
 import keras.backend as k
 from keras.layers import *
-from keras.layers.advanced_activations import ELU
 from keras import optimizers
 from keras.regularizers import l2
 from keras.models import Model
@@ -52,7 +51,7 @@ class ModelSpeech():  # 模型类
         # self.model = self.CreateCustomizedXceptionModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
 
         # self.model = self.CreateLSTMModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
-        self.model = self.CreateMLPModel(input_dim=672, classes=CLASS_NUM)
+        self.model = self.CreateLRModel(input_dim=672, classes=CLASS_NUM)
 
         # self.model = self.CreateResNetModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
         # self.model = self.CreateCustomizedInceptionModel2(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
@@ -157,7 +156,6 @@ class ModelSpeech():  # 模型类
         self.intelayer = Model(inputs=X_input, outputs=fc2)
 
         return model
-
 
     ##################################cnn module design#########################################
     ############################################################################################
@@ -364,16 +362,17 @@ class ModelSpeech():  # 模型类
         print('The comparative lstm model is established.')
         return model
 
-    def CreateMLPModel(self, input_dim, classes):
+    def CreateLRModel(self, input_dim, classes):
         model = Sequential()
-        model.add(Dense(512, input_dim=input_dim, activation='sigmoid'))
-        model.add(Dense(128, activation='sigmoid'))
-        model.add(Dense(classes, activation='softmax'))
+        # model.add(Dense(512, input_dim=input_dim, activation='sigmoid'))
+        # model.add(Dense(256, input_dim=input_dim, activation='sigmoid'))
+        # model.add(Dense(128, activation='sigmoid'))
+        model.add(Dense(classes, activation='softmax',input_dim=input_dim))
 
         optimizer = optimizers.Adadelta()
         model.compile(optimizer=optimizer, loss='binary_crossentropy')
         self.modelname = 'mlp'
-        print('The comparative mlp model is established.')
+        print('The comparative logistic regression model is established.')
         return model
 
     def TrainModel(self, datapath, epoch=2, batch_size=32, load_weights=False, filename='model_set/speech_model25'):
@@ -390,7 +389,7 @@ class ModelSpeech():  # 模型类
         print(90 * '*')
 
         iterations_per_epoch = min(data.DataNum) // (batch_size // CLASS_NUM) + 1
-        # iterations_per_epoch = 2
+        # iterations_per_epoch = 0
         print('trainer info:')
         print('training data size: %d' % num_data)
         print('increased epoches: ', epoch)
@@ -417,6 +416,7 @@ class ModelSpeech():  # 模型类
                 for input, labels in pbar:
                     stime = time.time()
                     loss = self.model.train_on_batch(input[0],labels)
+                    temp = self.model.predict_on_batch(input[0])
                     dtime = time.time() - stime
                     duration = duration + dtime
                     # okay = self.model.predict_on_batch(input[0])
@@ -432,12 +432,12 @@ class ModelSpeech():  # 模型类
                         iteration += 1
                 pbar.close()
                 if i % 1 == 0:
-                    tmetrics = self.TestModel(sess=sess, datapath=self.datapath, str_dataset='train', data_count=1000, out_report=False, writer=train_writter, step=i)
-                    metrics = self.TestModel(sess=sess, datapath=self.datapath, str_dataset='eval', data_count=-1, out_report=False, writer=train_writter, step=i)
+                    tmetrics = self.TestModel(sess=sess, datapath=datapath, str_dataset='train', data_count=1000, out_report=False, writer=train_writter, step=i)
+                    metrics = self.TestModel(sess=sess, datapath=datapath, str_dataset='eval', data_count=-1, out_report=False, writer=train_writter, step=i)
                     if PRIOR_ART == False:
                         condition = tmetrics['score'] > metrics['score'] and i > 0 and tmetrics['sensitivity'] >= 91 and tmetrics['specificity'] >= 91
                     else:
-                        condition = tmetrics['score'] > metrics['score'] and i > 0
+                        condition = i > 0
                     if condition:
                         if metrics['score'] >= best_score:
                             self.metrics = metrics
@@ -454,7 +454,7 @@ class ModelSpeech():  # 模型类
                 self.TestGenerability(weightspath=self.savpath[1])
             else:
                 print('The restricted best metric is not found. Done!')
-                path_test = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/network&&weights/mfcc/cnn+dnn/mfcc_cnn+dnn_weights_epoch18.h5'
+                path_test = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/network&&weights/spectrogram/mlp/spec_mlp_weights_epoch12.h5'
                 self.TestGenerability(weightspath=path_test)
             print('Training duration: {}s'.format(round(duration,2)))
 
@@ -462,7 +462,7 @@ class ModelSpeech():  # 模型类
         '''
         测试检验模型效果
         '''
-        data = DataSpeech(self.datapath, str_dataset)
+        data = DataSpeech(datapath, str_dataset)
         # data.LoadDataList(str_dataset)
         num_data = sum(data.DataNum)  # 获取数据的数量
         if (data_count <= 0 or data_count > num_data):  # 当data_count为小于等于0或者大于测试数据量的值时，则使用全部数据来测试
@@ -581,6 +581,7 @@ class ModelSpeech():  # 模型类
         # test_similar = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/test-similar(1113-9382)/', 'similar']
         # test_similar = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/1113(9382)strict/', 'similar']
         test_different = ['/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/test-0419-different/','different']
+
         # test_confirmloose = [
         #     '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect/test-confirm-loose0419/',
         #     'differentLoose']
@@ -611,14 +612,17 @@ class ModelSpeech():  # 模型类
             pbar = tqdm(range(num_data))
             for i in pbar:
                 data_input, data_labels = data.GetData((ran_num + i) % num_data, dataType=choice)  # 从随机数开始连续向后取一定数量数据
-                predictions = []
-                if len(data_input) <= AUDIO_LENGTH:
-                    data_in = np.zeros((1, AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), dtype=np.float)
-                    data_in[0, 0:len(data_input)] = data_input
-                    data_pre = self.model.predict_on_batch(data_in)
-                    predictions = np.argmax(data_pre[0], axis=0)
+                if PRIOR_ART == False:
+                    if len(data_input) <= AUDIO_LENGTH:
+                        data_in = np.zeros((1, AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), dtype=np.float)
+                        data_in[0, 0:len(data_input)] = data_input
+                        data_pre = self.model.predict_on_batch(data_in)
+                        predictions = np.argmax(data_pre[0], axis=0)
+                    else:
+                        assert (0)
                 else:
-                    assert (0)
+                    data_pre = self.model.predict_on_batch(np.expand_dims(data_input, axis=0))
+                    predictions = np.argmax(data_pre[0], axis=0)
                 tp, fp, tn, fn = Comapare2(predictions, data_labels[0])  # 计算metrics
                 overall_p += tp + fn
                 overall_n += tn + fp
