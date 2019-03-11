@@ -20,7 +20,7 @@ from readdata_bowel import Testing
 from general_func.gen_func import Comapare2
 from readdata_bowel import DataSpeech
 from readdata_bowel import FEATURE_TYPE, AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM, PRIOR_ART
-from help_func.utilities_keras import focal_loss, inception_model, inception_separable, inception_Xseparable, block,XcepBlock
+from help_func.utilities_keras import focal_loss, inception_model, inception_Xseparable, block,XcepBlock
 from help_func.utilties import plot_confusion_matrix
 
 class ModelSpeech():  # 模型类
@@ -46,12 +46,12 @@ class ModelSpeech():  # 模型类
             print('It is now concerning the related work!')
         print('This time the feature type is %s.'%FEATURE_TYPE.upper())
         self.modelname = ''
-        # self.model = self.CreateSimplifiedIntensifiedClassicModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
+        self.model = self.CreateSimplifiedIntensifiedClassicModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
         # self.model = self.CreateCustomizedResNetModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
         # self.model = self.CreateCustomizedXceptionModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
 
         # self.model = self.CreateLSTMModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1), classes=CLASS_NUM)
-        self.model = self.CreateLRModel(input_dim=672, classes=CLASS_NUM)
+        # self.model = self.CreateLRModel(input_dim=672, classes=CLASS_NUM)
 
         # self.model = self.CreateResNetModel(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
         # self.model = self.CreateCustomizedInceptionModel2(input_shape=(AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, 1),classes=CLASS_NUM)
@@ -454,8 +454,8 @@ class ModelSpeech():  # 模型类
                 self.TestGenerability(weightspath=self.savpath[1])
             else:
                 print('The restricted best metric is not found. Done!')
-                path_test = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/network&&weights/spectrogram/mlp/spec_mlp_weights_epoch12.h5'
-                self.TestGenerability(weightspath=path_test)
+                # path_test = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/network&&weights/spectrogram/mlp/spec_mlp_weights_epoch12.h5'
+                # self.TestGenerability(weightspath=path_test)
             print('Training duration: {}s'.format(round(duration,2)))
 
     def TestModel(self, sess, writer, datapath='', str_dataset='eval', data_count=32, out_report=False, show_ratio=True, step=0):

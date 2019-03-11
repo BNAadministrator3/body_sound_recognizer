@@ -1,29 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import datetime
 import platform as plat
 import os
 import keras
-from skimage.feature import hog
 
 import numpy as np
 from general_func.file_wav import GetFrequencyFeatures,MelSpectrogram, read_wav_data
 from debug.mfcc_trial import SimpleMfccFeatures
 import random
-
-PRIOR_ART = False#already choose hog features as the spec output!!!!
-FEATURE_TYPE = 'mfcc'
-
 AUDIO_LENGTH = 123  #size:200*197
-AUDIO_FEATURE_LENGTH = 200 if FEATURE_TYPE in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM'] else 26
 CLASS_NUM = 2
 
-#For compatibility
-MAX_AUDIO_LENGTH = AUDIO_LENGTH
-
 class DataSpeech():
-
-    def __init__(self, path, type, LoadToMem=False, MemWavCount=10000):
+    def __init__(self, path, feature_type, type):
         '''
         参数：
             path：数据存放位置根目录
@@ -44,6 +33,9 @@ class DataSpeech():
         if (self.slash != self.datapath[-1]):  # 在目录路径末尾增加斜杠
             self.datapath = self.datapath + self.slash
 
+        self.feature_type = feature_type
+        self.feat_dimension = 200 if self.feature_type in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM'] else 26
+
         self.common_path = ''
         self.list_bowel1 = []
         self.list_non0 = []
@@ -53,8 +45,6 @@ class DataSpeech():
         self.list_path = self.GenAll(self.type)
 
         self.class_num = CLASS_NUM
-
-        self.feat_dimension = AUDIO_FEATURE_LENGTH
         self.frame_length = 400
         # self.max_time_step = self.GetMaxTimeStep()
         # self.min_time_step = self.GetMinTimeStep()
@@ -131,7 +121,7 @@ class DataSpeech():
         label = (1, 0)
         # extract = {'spectrogram':GetFrequencyFeatures,'mfcc':mfccFeatures}
         path = ''
-        if FEATURE_TYPE in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM']:
+        if self.feature_type in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM']:
             if mode == 'balanced':
                 data = []
                 labels = []
@@ -144,12 +134,7 @@ class DataSpeech():
                         # data_input = SimpleMfccFeatures(wavsignal, fs)
                         data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
                         data_input = self.shifting(data_input)
-                        if PRIOR_ART == True:
-                            data_input = hog(data_input, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1), visualise=False)
-                        # data_input = MelSpectrogram(wavsignal, fs,frame_length = self.frame_length, shift=160,filternum = 26)
-                        else:
-
-                            data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                        data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                         data.append(data_input)
                         data_label = np.array([label[genre]])
                         labels.append(data_label)
@@ -159,14 +144,9 @@ class DataSpeech():
                 data_label = np.array([self.list_path[n_start][1]])
                 wavsignal, fs = read_wav_data(path)
                 data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length,shift=160)
-                # data_input = MelSpectrogram(wavsignal, fs, frame_length=self.frame_length, shift=160, filternum=26)
-                # data_input = SimpleMfccFeatures(wavsignal, fs)
-                if PRIOR_ART == True:
-                    data_input = hog(data_input, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1),visualise=False)
-                else:
-                    data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
+                data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                 return data_input,  data_label
-        elif FEATURE_TYPE in ['mfcc','MFCC','Mfcc']:
+        elif self.feature_type in ['mfcc','MFCC','Mfcc']:
             if mode == 'balanced':
                 data = []
                 labels = []
@@ -178,8 +158,6 @@ class DataSpeech():
                         wavsignal, fs = read_wav_data(path)
                         data_input = SimpleMfccFeatures(wavsignal, fs)
                         data_label = np.array([label[genre]])
-                        # if data_label[0] == 0:
-                        # if PRIOR_ART == False:
                         data_input = self.shifting(data_input)
                         data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
                         data.append(data_input)
@@ -195,7 +173,6 @@ class DataSpeech():
         else:
             print('Unknown feature type.')
             assert(0)
-
 
     def data_genetator(self, batch_size=32, epochs=0, audio_length=AUDIO_LENGTH):
         '''
@@ -217,7 +194,7 @@ class DataSpeech():
         pass
 
 class Testing():
-    def __init__(self, pathSame, pathDistinct):
+    def __init__(self, feature_type, pathSame, pathDistinct):
         system_type = plat.system()  # 由于不同的系统的文件路径表示不一样，需要进行判断
         self.pathSame = pathSame[0]
         self.pathSameLabel = pathSame[1]
@@ -240,7 +217,8 @@ class Testing():
 
         self.LoadDataList()
         self.class_num = CLASS_NUM
-        self.feat_dimension = AUDIO_FEATURE_LENGTH
+        self.feature_type = feature_type
+        self.feat_dimension = 200 if self.feature_type in ['spec','Spec','SPEC','Spectrogram','SPECTROGRAM'] else 26
         self.frame_length = 400
 
     def LoadDataList(self):
@@ -272,36 +250,16 @@ class Testing():
             path = self.listDistinct[n_start][0]
             data_label = np.array([self.listDistinct[n_start][1]])
         wavsignal, fs = read_wav_data(path)
-        if FEATURE_TYPE in ['spec', 'Spec', 'SPEC', 'Spectrogram', 'SPECTROGRAM']:
+        if self.feature_type in ['spec', 'Spec', 'SPEC', 'Spectrogram', 'SPECTROGRAM']:
             data_input = GetFrequencyFeatures(wavsignal, fs, self.feat_dimension, self.frame_length, shift=160)
-            if PRIOR_ART == True:
-               data_input = hog(data_input, orientations=8, pixels_per_cell=(16, 16), cells_per_block=(1, 1),visualise=False)
-               return data_input, data_label
-        elif FEATURE_TYPE in ['mfcc', 'MFCC', 'Mfcc']:
+        elif self.feature_type in ['mfcc', 'MFCC', 'Mfcc']:
             data_input = SimpleMfccFeatures(wavsignal, fs)
         else:
             print('Unknown feature type.')
             assert (0)
-
-
         data_input = data_input.reshape(data_input.shape[0], data_input.shape[1], 1)
         return data_input, data_label
 
 
 
-if (__name__ == '__main__'):
-    path = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/unbalanced'
-    l = DataSpeech(path, 'train')
-    l.LoadDataList()
-    l.listShuffle(2)
-    # print('max time step:', l.max_time_step)
-    # print('max time step:', l.GetMaxTimeStep())
-    # print('min time step:', l.min_time_step)
-    # print('min time step:', l.GetMinTimeStep())
-    # print('data size:', l.DataNum)
-    print(l.GetData(random.randint(0,8000), mode='non-repetitive')[0].shape)
-    aa = l.data_genetator(batch_size=32,)
-    for i in aa:
-        a, b = i
-        print(a, b)
-    pass
+
