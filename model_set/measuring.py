@@ -11,10 +11,9 @@ import time
 from tqdm import tqdm
 from keras.backend.tensorflow_backend import set_session
 from keras.models import load_model
-from help_func.utilities_keras import focal_loss
 from general_func.gen_func import Comapare2
-from readdata_bowel import Testing
-from readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH
+from release.readdata_bowel import Testing
+from release.readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'

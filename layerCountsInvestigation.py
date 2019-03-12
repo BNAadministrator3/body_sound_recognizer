@@ -9,12 +9,12 @@ from keras.layers import *
 from keras import optimizers
 from keras.regularizers import l2
 from keras.models import Model
-from readdata_bowel import DataSpeech
+from release.readdata_bowel import DataSpeech
 
 from help_func.utilities_keras import focal_loss, ReguBlock
-from readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
+from release.readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
 
-from Model44_trainSetMain  import ModelSpeech
+from release.Model44_trainSetMain import ModelSpeech
 class layerCurve(ModelSpeech):
     def __init__(self, datapath, layercounts):
         self.datapath = datapath

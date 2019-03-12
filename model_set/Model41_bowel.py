@@ -19,10 +19,9 @@ import numpy as np
 import random
 import tensorflow as tf
 
-from readdata_bowel import DataSpeech
-from readdata_bowel import MAX_AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
+from release.readdata_bowel import DataSpeech
+from release.readdata_bowel import MAX_AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
 from help_func.FL import focal_loss
-from collections import Counter
 
 
 class ModelSpeech():  # 语音模型类

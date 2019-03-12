@@ -2,11 +2,10 @@
 from keras.models import Model
 from keras import layers
 from keras.layers import Dense, Input, BatchNormalization, Activation, Flatten
-from keras.layers import Conv2D, SeparableConv2D, MaxPooling2D, GlobalAveragePooling2D, GlobalMaxPooling2D
+from keras.layers import Conv2D, SeparableConv2D, MaxPooling2D
 import sys
 sys.path.append('../../')
-from readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
-from keras.utils.data_utils import get_file
+from release.readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
 
 WEIGHTS_PATH = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.4/xception_weights_tf_dim_ordering_tf_kernels.h5'
 

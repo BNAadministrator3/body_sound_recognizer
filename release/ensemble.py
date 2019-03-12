@@ -15,11 +15,11 @@ from keras.initializers import Constant
 #self-made package
 from general_func.file_wav import GetFrequencyFeatures, read_wav_data
 from debug.mfcc_trial import SimpleMfccFeatures
-from readdata_bowel import Testing
+from release.readdata_bowel import Testing
 from general_func.gen_func import Comapare2
-from readdata_bowel import CLASS_NUM,FEATURE_TYPE
+from release.readdata_bowel import CLASS_NUM,FEATURE_TYPE
 from help_func.utilities_keras import block,XcepBlock
-from Model44_trainSetMain import ModelSpeech
+from release.Model44_trainSetMain import ModelSpeech
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 os.environ['TF_CPP_MIN_LOG_LEVEL']='2'
 

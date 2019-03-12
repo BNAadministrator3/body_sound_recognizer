@@ -17,8 +17,8 @@ from keras.activations import relu
 
 #self-made package
 from general_func.gen_func import Comapare2
-from readdata_bowel import DataSpeech
-from readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
+from release.readdata_bowel import DataSpeech
+from release.readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
 from help_func.utilities_keras import focal_loss, inception_model, inception_separable, inception_Xseparable, block
 from help_func.utilties import plot_confusion_matrix
 

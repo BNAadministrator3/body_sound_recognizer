@@ -16,10 +16,10 @@ from keras.models import load_model
 from keras.models import Sequential
 
 #self-made package
-from readdata_bowel import Testing
+from release.readdata_bowel import Testing
 from general_func.gen_func import Comapare2
-from readdata_bowel import DataSpeech
-from readdata_bowel import FEATURE_TYPE, AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM, PRIOR_ART
+from release.readdata_bowel import DataSpeech
+from release.readdata_bowel import FEATURE_TYPE, AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM, PRIOR_ART
 from help_func.utilities_keras import focal_loss, inception_model, inception_Xseparable, block,XcepBlock
 from help_func.utilties import plot_confusion_matrix
 

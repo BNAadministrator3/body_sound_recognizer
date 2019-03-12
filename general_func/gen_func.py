@@ -40,7 +40,7 @@ def Comapare(list_pre, list_true):
 	return tp,fp,tn,fn
 
 
-def Comapare2(pre, true):
+def Comapare2(pre, true): #bad name
 	'''
 	:param pre: single sparse predictions
 	:param true: single sparse labels
@@ -64,3 +64,5 @@ def Comapare2(pre, true):
 
 	return tp, fp, tn, fn
 
+def Compare2(pre, true):
+	return Comapare2(pre, true)

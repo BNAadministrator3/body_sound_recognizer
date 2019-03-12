@@ -2,10 +2,10 @@ import matplotlib.pyplot as plt
 import sys
 sys.path.append('../')
 from skimage.feature import hog
-from skimage import data, exposure
+from skimage import exposure
 import numpy as np
 
-from readdata_bowel import DataSpeech
+from release.readdata_bowel import DataSpeech
 datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect'
 traindata = DataSpeech(datapath, 'train')
 

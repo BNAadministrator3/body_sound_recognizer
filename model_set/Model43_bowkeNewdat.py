@@ -9,18 +9,17 @@ import time
 import tensorflow as tf
 import keras.backend as k
 from keras.layers import *
-from keras.layers.advanced_activations import ELU
 from keras import optimizers
 from keras.regularizers import l2
 from keras.models import Model
 from keras.models import load_model
 
 #self-made package
-from readdata_bowel import Testing
+from release.readdata_bowel import Testing
 from general_func.gen_func import Comapare2
-from readdata_bowel import DataSpeech
-from readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
-from help_func.utilities_keras import focal_loss, inception_model, inception_separable, inception_Xseparable, block
+from release.readdata_bowel import DataSpeech
+from release.readdata_bowel import AUDIO_LENGTH, AUDIO_FEATURE_LENGTH, CLASS_NUM
+from help_func.utilities_keras import focal_loss, inception_model, inception_Xseparable, block
 from help_func.utilties import plot_confusion_matrix
 
 class ModelSpeech():  # 模型类
