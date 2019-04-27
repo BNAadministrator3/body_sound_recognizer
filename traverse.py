@@ -75,7 +75,6 @@ def stringCheck(feature_type, module_type, layer_numbers):
         assert (0)
     return new_feature_type,new_module_type,new_layer_counts
 
-
 class pathpoper():
     def __init__(self):
         base = os.path.split(os.path.realpath(__file__))[0]
@@ -93,7 +92,6 @@ class pathpoper():
 
     def popup(self,feature_type,module_type,layers):
         return os.path.join(self.root,feature_type.lower()+'+'+module_type.lower(),str(layers))
-
 
 class DataSpeech():
     def __init__(self, path, feature_type, type):
@@ -444,7 +442,7 @@ class operation():
                     self.model.save(self.savpath[0])
                     self.model.save_weights(self.savpath[1])
         if 'epoch' in self.metrics.keys():
-            print('The best metric after restriction took place in the epoch: ', self.metrics['epoch'])
+            print('The best metric (without restriction) took place in the epoch: ', self.metrics['epoch'])
             print('Sensitivity: {}; Specificity: {}; Score: {}; Accuracy: {}'.format(self.metrics['sensitivity'],self.metrics['specificity'],self.metrics['score'],self.metrics['accuracy']))
             self.TestGenerability(feature_type = feature_type, weightspath=self.savpath[1])
         else:
@@ -597,18 +595,30 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth=True   #不全部占满显�? 按需分配
 set_session(tf.Session(config=config))
 datapath = '/home/zhaok14/example/PycharmProjects/setsail/individual_spp/bowelsounds/perfect'
-sys.stdout = logger()
-folders = pathpoper()
-nn = Network()
-for feature_type in ('spec','mfcc'):
-    for module_type in ('regular','residual','inception'):
-        for layer_counts in (2,4,6,8,10):
-            print()
-            print(40 * '-'+'HANDLEFLAG'+40 * '-')
-            print()
-            feature, module, layer = stringCheck(feature_type,module_type,layer_counts)
-            path = folders.popup(feature,module,layer)
-            model,name = nn.CNNForest(feature,module,layer)
-            controller = operation(model,name,path)
-            controller.train(datapath,feature)
-            gc.collect()
+SUMMARY = True
+if SUMMARY:
+    nn = Network()
+    model, name = nn.CNNForest('MFCC', 'Inception', 6)
+    model.summary()
+else:
+    sys.stdout = logger()
+    folders = pathpoper()
+    nn = Network()
+    st = time.time()
+    for feature_type in ('spec','mfcc'):
+        for module_type in ('regular','residual','inception'):
+            for layer_counts in (2,4,6,8,10):
+                print()
+                print(40 * '-'+'HANDLEFLAG'+40 * '-')
+                print()
+                feature, module, layer = stringCheck(feature_type,module_type,layer_counts)
+                path = folders.popup(feature,module,layer)
+                model,name = nn.CNNForest(feature,module,layer)
+                controller = operation(model,name,path)
+                controller.train(datapath,feature)
+                gc.collect()
+    en = time.time()-st
+    hour = en // 3600
+    minute = ( en - (hour * 3600) ) //60
+    seconds = en - (hour * 3600) - (minute * 60)
+    print('Overall design time: {}s, i.e., {} hour(s), {} minute(s), {}s'.format(en,int(hour),int(minute),seconds))
